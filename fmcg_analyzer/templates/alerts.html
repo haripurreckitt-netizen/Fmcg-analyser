@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Alerts - Credit Analytics{% endblock %}
+
+{% block page_title %}Risk Alerts{% endblock %}
+{% block page_description %}Monitor and manage high-risk customer accounts{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+        <i class="fas fa-exclamation-triangle stat-icon"></i>
+        <div class="stat-value">{{ alerts|selectattr('severity', 'equalto', 'Critical')|list|length }}</div>
+        <div class="stat-label">Critical Alerts</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+        <i class="fas fa-exclamation-circle stat-icon"></i>
+        <div class="stat-value">{{ alerts|selectattr('severity', 'equalto', 'High')|list|length }}</div>
+        <div class="stat-label">High Priority</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+        <i class="fas fa-info-circle stat-icon"></i>
+        <div class="stat-value">{{ alerts|selectattr('severity', 'equalto', 'Medium')|list|length }}</div>
+        <div class="stat-label">Medium Priority</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <i class="fas fa-bell stat-icon"></i>
+        <div class="stat-value">{{ alerts|length }}</div>
+        <div class="stat-label">Total Alerts</div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title">
+        <i class="fas fa-chart-pie"></i>
+        Alert Severity Distribution
+    </h3>
+    <canvas id="alertChart"></canvas>
+</div>
+
+{% for alert in alerts %}
+<div class="card" style="border-left: 4px solid 
+    {% if alert.severity == 'Critical' %}#ef4444
+    {% elif alert.severity == 'High' %}#f59e0b
+    {% elif alert.severity == 'Medium' %}#3b82f6
+    {% else %}#10b981{% endif %};">
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+        <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                <h4 style="font-size: 1.1rem; font-weight: 600; margin: 0;">
+                    Customer ID: {{ alert.customer_id }}
+                </h4>
+                {% if alert.severity == 'Critical' %}
+                    <span class="badge badge-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Critical
+                    </span>
+                {% elif alert.severity == 'High' %}
+                    <span class="badge badge-warning">
+                        <i class="fas fa-exclamation-circle"></i> High
+                    </span>
+                {% elif alert.severity == 'Medium' %}
+                    <span class="badge badge-info">
+                        <i class="fas fa-info-circle"></i> Medium
+                    </span>
+                {% else %}
+                    <span class="badge" style="background: #10b981; color: white;">
+                        <i class="fas fa-check-circle"></i> Low
+                    </span>
+                {% endif %}
+            </div>
+            <p style="color: #666; margin: 0;">{{ alert.reason|default('Risk threshold exceeded') }}</p>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 0.85rem; color: #999; margin-bottom: 0.25rem;">
+                <i class="fas fa-clock"></i> {{ alert.timestamp|default('Just now') }}
+            </div>
+            <div style="font-size: 0.85rem; color: #999;">
+                <i class="fas fa-star"></i> Score: {{ alert.credit_score|default('N/A') }}
+            </div>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1rem; background: rgba(0, 0, 0, 0.02); border-radius: 8px; margin-bottom: 1rem;">
+        <div>
+            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">Outstanding Amount</div>
+            <div style="font-size: 1.1rem; font-weight: 600;">${{ "%.2f"|format(alert.outstanding_amount|default(0)) }}</div>
+        </div>
+        <div>
+            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">Days Overdue</div>
+            <div style="font-size: 1.1rem; font-weight: 600;">{{ alert.days_overdue|default(0) }} days</div>
+        </div>
+        <div>
+            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">Risk Score</div>
+            <div style="font-size: 1.1rem; font-weight: 600;">{{ "%.1f"|format(alert.risk_score|default(0)) }}%</div>
+        </div>
+        <div>
+            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">Contact Attempts</div>
+            <div style="font-size: 1.1rem; font-weight: 600;">{{ alert.contact_attempts|default(0) }}</div>
+        </div>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <strong style="color: #333;">Recommended Action:</strong>
+            <span style="color: #666;">{{ alert.recommended_action|default('Contact customer immediately') }}</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button style="padding: 0.5rem 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                <i class="fas fa-phone"></i> Contact
+            </button>
+            <button style="padding: 0.5rem 1rem; background: white; color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                <i class="fas fa-check"></i> Resolve
+            </button>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% if not alerts %}
+<div class="card" style="text-align: center; padding: 3rem;">
+    <i class="fas fa-check-circle" style="font-size: 4rem; color: #10b981; margin-bottom: 1rem;"></i>
+    <h3 style="color: #333; margin-bottom: 0.5rem;">No Active Alerts</h3>
+    <p style="color: #666;">All customer accounts are in good standing</p>
+</div>
+{% endif %}
+
+<div class="card">
+    <h3 class="card-title">
+        <i class="fas fa-history"></i>
+        Alert History
+    </h3>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Customer ID</th>
+                    <th>Severity</th>
+                    <th>Reason</th>
+                    <th>Credit Score</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if alerts %}
+                    {% for alert in alerts[:20] %}
+                    <tr>
+                        <td><strong>{{ alert.customer_id }}</strong></td>
+                        <td>
+                            {% if alert.severity == 'Critical' %}
+                                <span class="badge badge-danger">Critical</span>
+                            {% elif alert.severity == 'High' %}
+                                <span class="badge badge-warning">High</span>
+                            {% elif alert.severity == 'Medium' %}
+                                <span class="badge badge-info">Medium</span>
+                            {% else %}
+                                <span class="badge" style="background: #10b981; color: white;">Low</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ alert.reason|default('Risk threshold exceeded') }}</td>
+                        <td>{{ alert.credit_score|default('N/A') }}</td>
+                        <td>${{ "%.2f"|format(alert.outstanding_amount|default(0)) }}</td>
+                        <td>{{ alert.timestamp|default('Today') }}</td>
+                        <td>
+                            <span class="badge" style="background: #f59e0b; color: white;">
+                                <i class="fas fa-clock"></i> Pending
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 2rem; color: #999;">No alert history available</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Alert Severity Chart
+    const alertData = {
+        critical: {{ alerts|selectattr('severity', 'equalto', 'Critical')|list|length }},
+        high: {{ alerts|selectattr('severity', 'equalto', 'High')|list|length }},
+        medium: {{ alerts|selectattr('severity', 'equalto', 'Medium')|list|length }},
+        low: {{ alerts|selectattr('severity', 'equalto', 'Low')|list|length }}
+    };
+
+    const ctx = document.getElementById('alertChart').getContext('2d');
+    const alertChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Critical', 'High', 'Medium', 'Low'],
+            datasets: [{
+                data: [alertData.critical, alertData.high, alertData.medium, alertData.low],
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(16, 185, 129, 0.8)'
+                ],
+                borderWidth: 3,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        font: {
+                            size: 14
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

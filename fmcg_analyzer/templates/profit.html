@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+.bg-glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+}
+.card { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.06); margin-bottom: 1.2rem; }
+.table-wrapper { overflow-x: auto; }
+.table th, .table td { padding: 10px; text-align: left; }
+.table th.sortable { cursor: pointer; user-select: none; }
+.table th.sortable:after { content: " \\2195"; font-size: 0.8em; color: #888; margin-left: 6px; }
+.badge-danger { background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 5px; }
+.badge-success { background-color: #28a745; color: white; padding: 5px 10px; border-radius: 5px; }
+.badge-warning { background-color: #ffc107; color: black; padding: 5px 10px; border-radius: 5px; }
+.positive { color: #28a745; }
+.negative { color: #dc3545; }
+.chart-container { position: relative; height: 320px; width: 100%; }
+.container { max-width: 1400px; }
+</style>
+{% endblock %}
+
+{% block title %}Profit Analysis{% endblock %}
+{% block page_title %}Profit Analytics Dashboard{% endblock %}
+{% block page_description %}Insights into profit by customer, route, and company{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-8">
+            <form method="GET" class="filter-form bg-glass p-3 rounded">
+                <div class="row g-2">
+                    <div class="col-md-5">
+                        <label for="start" class="form-label">Start Date:</label>
+                        <input type="date" id="start" name="start" value="{{ start_date }}" class="form-control">
+                    </div>
+                    <div class="col-md-5">
+                        <label for="end" class="form-label">End Date:</label>
+                        <input type="date" id="end" name="end" value="{{ end_date }}" class="form-control">
+                    </div>
+                    <div class="col-md-2 align-self-end">
+                        <button type="submit" class="btn btn-primary w-100">Apply</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-4 text-end">
+            <form method="POST" action="{{ url_for('update_database') }}" class="d-inline">
+                <button type="submit" class="btn btn-success">Update Profit Data</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-glass p-3 text-center">
+                <h4>{{ "{:,}".format(summary.total_profit|int) }}</h4>
+                <p>Total Profit (PKR)</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-glass p-3 text-center">
+                <h4>{{ "{:,}".format(summary.avg_profit_per_invoice|int) }}</h4>
+                <p>Avg Profit per Invoice</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-glass p-3 text-center">
+                <h4>{{ "{:,}".format(summary.total_cost|int) }}</h4>
+                <p>Total Cost (PKR)</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-glass p-3 text-center">
+                <h4>{{ "{:,}".format(summary.total_invoices|int) }}</h4>
+                <p>Total Invoices</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card bg-glass">
+                <h3 class="card-title p-3"><i class="fas fa-user"></i> Top Customers by Profit</h3>
+                <div class="chart-container p-3">
+                    <canvas id="customerProfitChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-glass">
+                <h3 class="card-title p-3"><i class="fas fa-route"></i> Top Routes by Profit</h3>
+                <div class="chart-container p-3">
+                    <canvas id="routeProfitChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Company Chart -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-12">
+            <div class="card bg-glass">
+                <h3 class="card-title p-3"><i class="fas fa-building"></i> Company Profit Distribution</h3>
+                <div class="chart-container p-3">
+                    <canvas id="companyProfitChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Profit Analysis (sortable) -->
+    <div class="card bg-glass mb-4">
+        <h3 class="card-title p-3"><i class="fas fa-user"></i> Customer Profit Analysis</h3>
+        <div class="table-wrapper p-3">
+            <table class="table table-hover sortable">
+                <thead>
+                    <tr>
+                        <th class="sortable">Customer</th>
+                        <th class="sortable">Profit (PKR)</th>
+                        <th class="sortable">Cost (PKR)</th>
+                        <th class="sortable">Invoices</th>
+                        <th class="sortable">Profit Margin (%)</th>
+                        <th class="sortable">Credit Score</th>
+                        <th class="sortable">Balance (PKR)</th>
+                        <th class="sortable">Days Since</th>
+                        <th class="sortable">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in summary.customer_profit %}
+                    <tr>
+                        <td><a href="{{ url_for('customer_details', name=row.customer_name|urlencode) }}">{{ row.customer_name|default('N/A') }}</a></td>
+                        <td>{{ "{:,}".format(row.Profit|int) }}</td>
+                        <td>{{ "{:,}".format(row['Net Cost']|int) }}</td>
+                        <td>{{ row.invoices }}</td>
+                        <td>{{ row["Profit Margin (%)"]|default(0)|round(2) }}</td>
+                        <td>{{ row.credit_score|default(0)|round(1) }}</td>
+                        <td class="{% if row.balance >= 0 %}positive{% else %}negative{% endif %}">{{ "{:,}".format(row.balance|int) }}</td>
+                        <td>{{ row.days_since|default(0) }}</td>
+                        <td>
+                            <span class="badge {% if row.Status == 'Active' %}badge-success{% elif row.Status == 'Overdue' %}badge-danger{% else %}badge-warning{% endif %}">
+                                {{ row.Status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Route Profit Analysis (sortable) -->
+    <div class="card bg-glass mb-4">
+        <h3 class="card-title p-3"><i class="fas fa-route"></i> Route Profit Analysis</h3>
+        <div class="table-wrapper p-3">
+            <table class="table table-hover sortable">
+                <thead>
+                    <tr>
+                        <th class="sortable">Route</th>
+                        <th class="sortable">Profit (PKR)</th>
+                        <th class="sortable">Cost (PKR)</th>
+                        <th class="sortable">Invoices</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in summary.route_profit %}
+                    <tr>
+                        <td>{{ row.route|default('N/A') }}</td>
+                        <td>{{ "{:,}".format(row.Profit|int) }}</td>
+                        <td>{{ "{:,}".format(row['Net Cost']|int) }}</td>
+                        <td>{{ row.invoices }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Company Profit Analysis (sortable) -->
+    <div class="card bg-glass mb-4">
+        <h3 class="card-title p-3"><i class="fas fa-building"></i> Company Profit Analysis</h3>
+        <div class="table-wrapper p-3">
+            <table class="table table-hover sortable">
+                <thead>
+                    <tr>
+                        <th class="sortable">Company</th>
+                        <th class="sortable">Profit (PKR)</th>
+                        <th class="sortable">Cost (PKR)</th>
+                        <th class="sortable">Invoices</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in summary.company_profit %}
+                    <tr>
+                        <td>{{ row.company|default('N/A') }}</td>
+                        <td>{{ "{:,}".format(row.Profit|int) }}</td>
+                        <td>{{ "{:,}".format(row['Net Cost']|int) }}</td>
+                        <td>{{ row.invoices }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// --- Simple click-to-sort for tables with .sortable ---
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.sortable').forEach(function(table) {
+    const ths = table.querySelectorAll('th.sortable');
+    ths.forEach(function(th, idx) {
+      th.addEventListener('click', function() {
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const columnIndex = Array.from(th.parentNode.children).indexOf(th);
+        const asc = !th.classList.contains('asc');
+        // reset classes
+        ths.forEach(h => h.classList.remove('asc', 'desc'));
+        th.classList.add(asc ? 'asc' : 'desc');
+
+        rows.sort(function(a,b) {
+          const A = a.children[columnIndex].innerText.replace(/[, ]+/g, '').trim();
+          const B = b.children[columnIndex].innerText.replace(/[, ]+/g, '').trim();
+          // handle numeric compare if both numeric
+          const numA = parseFloat(A);
+          const numB = parseFloat(B);
+          if (!isNaN(numA) && !isNaN(numB)) {
+            return asc ? numA - numB : numB - numA;
+          }
+          // fallback string compare
+          return asc ? A.localeCompare(B) : B.localeCompare(A);
+        });
+        rows.forEach(r => tbody.appendChild(r));
+      });
+      // mark as sortable header style
+      th.classList.add('sortable');
+    });
+  });
+});
+
+// --- Charts ---
+const customerProfitData = {
+    labels: {{ summary.sorted_customers.labels|tojson }},
+    datasets: [{ label: 'Profit (PKR)', data: {{ summary.sorted_customers.data|tojson }}, backgroundColor: '#007bff' }]
+};
+const routeProfitData = {
+    labels: {{ summary.sorted_routes.labels|tojson }},
+    datasets: [{ label: 'Profit (PKR)', data: {{ summary.sorted_routes.data|tojson }}, backgroundColor: '#28a745' }]
+};
+const companyProfitData = {
+    labels: {{ summary.sorted_companies.labels|tojson }},
+    datasets: [{
+        label: 'Profit (PKR)',
+        data: {{ summary.sorted_companies.data|tojson }},
+        backgroundColor: {{ summary.company_profit|map(attribute='color')|list|tojson }}
+    }]
+};
+
+new Chart(document.getElementById('customerProfitChart'), {
+    type: 'bar',
+    data: customerProfitData,
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('routeProfitChart'), {
+    type: 'bar',
+    data: routeProfitData,
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('companyProfitChart'), {
+    type: 'pie',
+    data: companyProfitData,
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+});
+</script>
+{% endblock %}

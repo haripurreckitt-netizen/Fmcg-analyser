@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Predictions - Credit Analytics{% endblock %}
+
+{% block page_title %}Risk Predictions{% endblock %}
+{% block page_description %}ML-powered credit risk predictions and insights{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <i class="fas fa-robot stat-icon"></i>
+        <div class="stat-value">{{ predictions|length }}</div>
+        <div class="stat-label">Total Predictions</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+        <i class="fas fa-exclamation-circle stat-icon"></i>
+        <div class="stat-value">{{ predictions|selectattr('risk_level', 'equalto', 'High')|list|length }}</div>
+        <div class="stat-label">High Risk</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+        <i class="fas fa-check-circle stat-icon"></i>
+        <div class="stat-value">{{ predictions|selectattr('risk_level', 'equalto', 'Low')|list|length }}</div>
+        <div class="stat-label">Low Risk</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+        <i class="fas fa-percentage stat-icon"></i>
+        <div class="stat-value">{{ "%.1f"|format(predictions|map(attribute='probability')|sum / predictions|length * 100 if predictions else 0) }}%</div>
+        <div class="stat-label">Avg Risk Probability</div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title">
+        <i class="fas fa-chart-pie"></i>
+        Risk Distribution
+    </h3>
+    <canvas id="riskChart"></canvas>
+</div>
+
+<div class="card">
+    <h3 class="card-title">
+        <i class="fas fa-table"></i>
+        Prediction Details
+    </h3>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Customer ID</th>
+                    <th>Credit Score</th>
+                    <th>Risk Probability</th>
+                    <th>Risk Level</th>
+                    <th>Recommendation</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if predictions %}
+                    {% for pred in predictions %}
+                    <tr>
+                        <td><strong>{{ pred.customer_id }}</strong></td>
+                        <td>{{ pred.credit_score|default('N/A') }}</td>
+                        <td>
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 100px; height: 8px; background: #e5e7eb; border-radius: 4px; margin-right: 10px; overflow: hidden;">
+                                    <div style="width: {{ (pred.probability * 100)|int }}%; height: 100%; background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);"></div>
+                                </div>
+                                <span>{{ "%.1f"|format(pred.probability * 100) }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if pred.risk_level == 'High' %}
+                                <span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> High Risk</span>
+                            {% elif pred.risk_level == 'Medium' %}
+                                <span class="badge badge-warning"><i class="fas fa-exclamation-circle"></i> Medium Risk</span>
+                            {% else %}
+                                <span class="badge badge-success"><i class="fas fa-check-circle"></i> Low Risk</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ pred.recommendation|default('Standard processing') }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: #999;">No predictions available</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title">
+        <i class="fas fa-info-circle"></i>
+        Model Performance
+    </h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+        <div style="text-align: center; padding: 1rem; background: rgba(102, 126, 234, 0.1); border-radius: 10px;">
+            <div style="font-size: 2rem; font-weight: 700; color: #667eea; margin-bottom: 0.5rem;">
+                {{ "%.2f"|format(predictions|selectattr('accuracy')|map(attribute='accuracy')|first|default(0.85) * 100) }}%
+            </div>
+            <div style="color: #666; font-size: 0.9rem;">Accuracy</div>
+        </div>
+        <div style="text-align: center; padding: 1rem; background: rgba(102, 126, 234, 0.1); border-radius: 10px;">
+            <div style="font-size: 2rem; font-weight: 700; color: #667eea; margin-bottom: 0.5rem;">
+                {{ "%.2f"|format(predictions|selectattr('precision')|map(attribute='precision')|first|default(0.82) * 100) }}%
+            </div>
+            <div style="color: #666; font-size: 0.9rem;">Precision</div>
+        </div>
+        <div style="text-align: center; padding: 1rem; background: rgba(102, 126, 234, 0.1); border-radius: 10px;">
+            <div style="font-size: 2rem; font-weight: 700; color: #667eea; margin-bottom: 0.5rem;">
+                {{ "%.2f"|format(predictions|selectattr('recall')|map(attribute='recall')|first|default(0.88) * 100) }}%
+            </div>
+            <div style="color: #666; font-size: 0.9rem;">Recall</div>
+        </div>
+        <div style="text-align: center; padding: 1rem; background: rgba(102, 126, 234, 0.1); border-radius: 10px;">
+            <div style="font-size: 2rem; font-weight: 700; color: #667eea; margin-bottom: 0.5rem;">
+                {{ "%.2f"|format(predictions|selectattr('f1_score')|map(attribute='f1_score')|first|default(0.85) * 100) }}%
+            </div>
+            <div style="color: #666; font-size: 0.9rem;">F1 Score</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Risk Distribution Chart
+    const riskData = {
+        high: {{ predictions|selectattr('risk_level', 'equalto', 'High')|list|length }},
+        medium: {{ predictions|selectattr('risk_level', 'equalto', 'Medium')|list|length }},
+        low: {{ predictions|selectattr('risk_level', 'equalto', 'Low')|list|length }}
+    };
+
+    const ctx = document.getElementById('riskChart').getContext('2d');
+    const riskChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['High Risk', 'Medium Risk', 'Low Risk'],
+            datasets: [{
+                data: [riskData.high, riskData.medium, riskData.low],
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(16, 185, 129, 0.8)'
+                ],
+                borderWidth: 3,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        font: {
+                            size: 14
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

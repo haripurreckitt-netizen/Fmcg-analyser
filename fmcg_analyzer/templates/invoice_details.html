@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice Details - {{ invoice.invoice_id }}{% endblock %}
+{% block page_title %}Invoice: {{ invoice.invoice_id }}{% endblock %}
+{% block page_description %}Detailed breakdown of invoice {{ invoice.invoice_id }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 class="card-title"><i class="fas fa-file-invoice"></i> Invoice Information</h3>
+        <a href="{{ url_for('customer_details', name=invoice.customer_name|urlencode) }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Back to Customer
+        </a>
+    </div>
+    
+    <div class="invoice-header">
+        <div class="invoice-info-grid">
+            <div class="info-item">
+                <span class="info-label">Customer:</span>
+                <span class="info-value">
+                    <a href="{{ url_for('customer_details', name=invoice.customer_name|urlencode) }}">
+                        {{ invoice.customer_name }}
+                    </a>
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Order Date:</span>
+                <span class="info-value">{{ invoice.order_date.strftime('%Y-%m-%d') if invoice.order_date else "N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Orderbooker:</span>
+                <span class="info-value">
+                    <a href="{{ url_for('orderbooker_details', name=invoice.orderbooker|urlencode) }}">
+                        {{ invoice.orderbooker }}
+                    </a>
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Company:</span>
+                <span class="info-value">{{ invoice.company }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Route:</span>
+                <span class="info-value">{{ invoice.route }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Credit Score:</span>
+                <span class="info-value">{{ invoice.credit_score }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title"><i class="fas fa-chart-bar"></i> Invoice Summary</h3>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ "{:,}".format(invoice.total_amount) }} PKR</div>
+            <div class="stat-label">Total Sales</div>
+            <i class="fas fa-dollar-sign stat-icon"></i>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ "{:,}".format(invoice.total_quantity) }}</div>
+            <div class="stat-label">Total Units</div>
+            <i class="fas fa-box stat-icon"></i>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ "{:,}".format(invoice.total_cost) }} PKR</div>
+            <div class="stat-label">Total Cost</div>
+            <i class="fas fa-coins stat-icon"></i>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value {% if invoice.total_profit >= 0 %}positive{% else %}negative{% endif %}">
+                {{ "{:,}".format(invoice.total_profit) }} PKR
+            </div>
+            <div class="stat-label">Total Profit</div>
+            <i class="fas fa-chart-line stat-icon"></i>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title"><i class="fas fa-list"></i> Product Breakdown</h3>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Unit Price (PKR)</th>
+                    <th>Total Amount (PKR)</th>
+                    <th>% of Invoice</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.product_list %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><strong>{{ item.product }}</strong></td>
+                    <td>{{ "{:,}".format(item.net_quantity|int) }}</td>
+                    <td>{{ "{:,.2f}".format(item.unit_price) }}</td>
+                    <td>{{ "{:,}".format(item.net_amount|int) }}</td>
+                    <td>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: {{ (item.net_amount / invoice.total_amount * 100)|round(1) }}%">
+                                {{ (item.net_amount / invoice.total_amount * 100)|round(1) }}%
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2"><strong>Total</strong></td>
+                    <td><strong>{{ "{:,}".format(invoice.total_quantity) }}</strong></td>
+                    <td>-</td>
+                    <td><strong>{{ "{:,}".format(invoice.total_amount) }} PKR</strong></td>
+                    <td><strong>100%</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<style>
+.btn-back {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #6c757d;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.9em;
+    transition: background-color 0.3s;
+}
+
+.btn-back:hover {
+    background-color: #5a6268;
+}
+
+.btn-back i {
+    margin-right: 6px;
+}
+
+.invoice-header {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.invoice-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.85em;
+    text-transform: uppercase;
+}
+
+.info-value {
+    font-size: 1.1em;
+    color: #212529;
+}
+
+.info-value a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.info-value a:hover {
+    text-decoration: underline;
+}
+
+.progress-bar-container {
+    width: 100%;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 24px;
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, #007bff, #0056b3);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 0.85em;
+    transition: width 0.3s ease;
+}
+
+table tfoot {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    border-top: 2px solid #dee2e6;
+}
+
+.positive {
+    color: #28a745;
+}
+
+.negative {
+    color: #dc3545;
+}
+</style>
+{% endblock %}

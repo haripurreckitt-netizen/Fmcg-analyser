@@ -1,0 +1,624 @@
+{% extends "base.html" %}
+
+{% block title %}Route Planner{% endblock %}
+{% block page_title %}Route Planner{% endblock %}
+{% block page_description %}Your daily action plan for sales routes.{% endblock %}
+
+{% block content %}
+<style>
+    .sortable { cursor: pointer; user-select: none; }
+    .sortable:hover { background-color: #f0f0f0; }
+    .sortable::after { content: ' ⇅'; opacity: 0.3; }
+    .customer-group { margin-bottom: 1.5rem; padding: 1rem; border-left: 3px solid #007bff; background: #f8f9fa; }
+    .alert-summary { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+    .product-tag { display: inline-block; padding: 0.25rem 0.5rem; background: #fff; border: 1px solid #dee2e6; border-radius: 3px; margin: 0.25rem; font-size: 0.875rem; }
+    .product-tag.trending { border-color: #ff6b6b; background: #fff5f5; }
+    
+    /* View Toggle Buttons */
+    .view-toggle-container {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.25rem;
+        background: #f1f5f9;
+        border-radius: 10px;
+        border: 2px solid #e2e8f0;
+    }
+    
+    .btn-view {
+        padding: 0.5rem 1rem;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        color: #64748b;
+    }
+    .btn-view:hover {
+        color: #6366f1;
+    }
+    .btn-view.active {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    }
+    
+    /* Status Group Headers for Full Picture View */
+    .status-group-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        padding: 0.75rem 1.25rem;
+        border-radius: 10px;
+        margin: 1.5rem 0 1rem 0;
+        border-left: 4px solid;
+        font-weight: 700;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .status-group-header.active { border-color: #10b981; }
+    .status-group-header.drifting { border-color: #f59e0b; }
+    .status-group-header.lost { border-color: #ef4444; }
+    
+    /* Compact Grid View */
+    .customer-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1rem;
+    }
+    
+    .customer-card-mini {
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+    
+    .customer-card-mini.credit-blocked {
+        border-color: #fca5a5;
+        background: linear-gradient(to bottom, #ffffff 0%, #fef2f2 100%);
+    }
+    
+    .customer-card-mini:hover {
+        border-color: #6366f1;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .customer-card-mini.expanded {
+        border-color: #6366f1;
+    }
+    
+    .customer-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .product-count {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        font-weight: 700;
+        font-size: 1.1rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 8px;
+        min-width: 36px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    
+    .mini-badge {
+        display: inline-block;
+        padding: 0.15rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    
+    .mini-badge.badge-danger {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+    }
+    
+    .mini-badge.badge-warning {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+    }
+    
+    .mini-badge.badge-blocked {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+        font-weight: 700;
+    }
+    
+    .customer-card-products {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+    
+    .customer-card-expanded {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px dashed #e2e8f0;
+    }
+    
+    .mini-product-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.3rem 0.6rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #334155;
+        transition: all 0.2s ease;
+    }
+    
+    .mini-product-tag:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+    
+    .mini-product-tag.trending {
+        border-color: #ff6b6b;
+        background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+        color: #c92a2a;
+    }
+    
+    .mini-product-tag.more-indicator {
+        background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%);
+        border-color: #c7d2fe;
+        color: #4c1d95;
+        font-weight: 600;
+    }
+    
+    .overdue-badge {
+        display: inline-block;
+        padding: 0.1rem 0.4rem;
+        background: white;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #ef4444;
+        border: 1px solid #fecaca;
+    }
+    
+    .view-mode {
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Recovery Table Styles */
+    .recovery-table {
+        width: 100%;
+        font-size: 0.875rem;
+    }
+    
+    .recovery-table tbody tr:hover {
+        background: #fef2f2;
+    }
+    
+    .recovery-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-align: center;
+        min-width: 40px;
+    }
+    
+    .recovery-badge.score-1 { background: #fee2e2; color: #991b1b; }
+    .recovery-badge.score-2 { background: #fed7aa; color: #9a3412; }
+    .recovery-badge.score-3 { background: #fef3c7; color: #92400e; }
+    
+    @media (max-width: 768px) {
+        .customer-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="card">
+    <form method="GET">
+        <input type="hidden" name="view" value="{{ view_mode }}">
+        <div style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 1rem; align-items: end;">
+            <div>
+                <label for="route" class="form-label">Select Route(s)</label>
+                <select id="route" name="route" class="form-control" multiple size="4">
+                    {% for r in available_routes %}
+                    <option value="{{ r }}" {% if r in selected_routes %}selected{% endif %}>{{ r }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="company" class="form-label">Select Company</label>
+                <select id="company" name="company" class="form-control">
+                    {% for c in available_companies %}
+                    <option value="{{ c }}" {% if c == selected_company %}selected{% endif %}>{{ c|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Generate Plan</button>
+        </div>
+    </form>
+</div>
+
+<!-- Section 1: Customer Action Items -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h3 class="card-title" style="margin: 0;"><i class="fas fa-exclamation-triangle"></i> Customer Action Items ({{ customer_alerts|length }})</h3>
+            <p class="text-muted" style="margin: 0.25rem 0 0 0; font-size: 0.875rem;">Quick scan view for route planning</p>
+        </div>
+        <div class="view-toggle-container">
+            <button onclick="toggleViewMode('action_only')" class="btn-view {% if view_mode == 'action_only' %}active{% endif %}" id="btn-action-only">
+                <i class="fas fa-clipboard-list"></i> Action Items Only
+            </button>
+            <button onclick="toggleViewMode('full_picture')" class="btn-view {% if view_mode == 'full_picture' %}active{% endif %}" id="btn-full-picture">
+                <i class="fas fa-chart-pie"></i> Full Picture
+            </button>
+        </div>
+    </div>
+    
+    <div class="view-mode">
+        {% if view_mode == 'action_only' %}
+            <!-- Action Items Only View (15+ days) -->
+            <div class="customer-grid">
+                {% for customer in customer_alerts %}
+                <div class="customer-card-mini {% if customer.is_credit_blocked %}credit-blocked{% endif %}" onclick="toggleExpand(this)">
+                    <div class="customer-card-header">
+                        <div style="flex: 1; min-width: 0;">
+                            <a href="{{ url_for('customer_deep_dive', name=customer.name|urlencode) }}" 
+                               style="color: #212529; font-weight: 600; font-size: 0.95rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                               onclick="event.stopPropagation();">
+                                {{ customer.name }}
+                            </a>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                                <span class="mini-badge badge-warning">📅 {{ customer.days_since_last_order }}d</span>
+                                {% if customer.is_credit_blocked %}
+                                    <span class="mini-badge badge-blocked">⛔ Recovery First</span>
+                                {% endif %}
+                                {% if customer.balance > 0 %}
+                                    <span class="mini-badge badge-warning">💳 {{ "{:,.0f}".format(customer.balance/1000) }}K</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="product-count">{{ customer.product_alerts|length }}</div>
+                    </div>
+                    
+                    <div class="customer-card-products">
+                        {% for alert in customer.product_alerts[:3] %}
+                        <span class="mini-product-tag {{ 'trending' if alert.is_trending else '' }}">
+                            {{ alert.product_name }}{% if alert.is_trending %} 🔥{% endif %}
+                            <span class="overdue-badge">+{{ alert.days_overdue }}d</span>
+                        </span>
+                        {% endfor %}
+                        {% if customer.product_alerts|length > 3 %}
+                        <span class="mini-product-tag more-indicator">+{{ customer.product_alerts|length - 3 }} more</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if customer.product_alerts|length > 3 %}
+                    <div class="customer-card-expanded" style="display: none;">
+                        {% for alert in customer.product_alerts[3:] %}
+                        <span class="mini-product-tag {{ 'trending' if alert.is_trending else '' }}">
+                            {{ alert.product_name }}{% if alert.is_trending %} 🔥{% endif %}
+                            <span class="overdue-badge">+{{ alert.days_overdue }}d</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p style="grid-column: 1/-1; text-align: center; color: #6c757d; padding: 2rem;">No urgent alerts for this selection. All clear! ✅</p>
+                {% endfor %}
+            </div>
+        {% else %}
+            <!-- Full Picture View (All customers grouped by status) -->
+            {% set active_customers = customer_alerts|selectattr('status_group', 'equalto', 'active')|list %}
+            {% set drifting_customers = customer_alerts|selectattr('status_group', 'equalto', 'drifting')|list %}
+            {% set lost_customers = customer_alerts|selectattr('status_group', 'equalto', 'lost')|list %}
+            
+            {% if active_customers %}
+            <div class="status-group-header active">
+                🟢 Active Customers ({{ active_customers|length }}) - Ordered within 15 days
+            </div>
+            <div class="customer-grid">
+                {% for customer in active_customers %}
+                <div class="customer-card-mini {% if customer.is_credit_blocked %}credit-blocked{% endif %}" onclick="toggleExpand(this)">
+                    <div class="customer-card-header">
+                        <div style="flex: 1; min-width: 0;">
+                            <a href="{{ url_for('customer_deep_dive', name=customer.name|urlencode) }}" 
+                               style="color: #212529; font-weight: 600; font-size: 0.95rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                               onclick="event.stopPropagation();">
+                                {{ customer.name }}
+                            </a>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                                <span class="mini-badge" style="background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7;">📅 {{ customer.days_since_last_order }}d</span>
+                                {% if customer.is_credit_blocked %}
+                                    <span class="mini-badge badge-blocked">⛔ Recovery First</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="product-count">{{ customer.product_alerts|length }}</div>
+                    </div>
+                    
+                    <div class="customer-card-products">
+                        {% for alert in customer.product_alerts[:3] %}
+                        <span class="mini-product-tag {{ 'trending' if alert.is_trending else '' }}">
+                            {{ alert.product_name }}{% if alert.is_trending %} 🔥{% endif %}
+                            <span class="overdue-badge">+{{ alert.days_overdue }}d</span>
+                        </span>
+                        {% endfor %}
+                        {% if customer.product_alerts|length > 3 %}
+                        <span class="mini-product-tag more-indicator">+{{ customer.product_alerts|length - 3 }} more</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if customer.product_alerts|length > 3 %}
+                    <div class="customer-card-expanded" style="display: none;">
+                        {% for alert in customer.product_alerts[3:] %}
+                        <span class="mini-product-tag {{ 'trending' if alert.is_trending else '' }}">
+                            {{ alert.product_name }}{% if alert.is_trending %} 🔥{% endif %}
+                            <span class="overdue-badge">+{{ alert.days_overdue }}d</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            {% if drifting_customers %}
+            <div class="status-group-header drifting">
+                🟡 Drifting Customers ({{ drifting_customers|length }}) - 15-60 days since last order
+            </div>
+            <div class="customer-grid">
+                {% for customer in drifting_customers %}
+                <div class="customer-card-mini {% if customer.is_credit_blocked %}credit-blocked{% endif %}" onclick="toggleExpand(this)">
+                    <div class="customer-card-header">
+                        <div style="flex: 1; min-width: 0;">
+                            <a href="{{ url_for('customer_deep_dive', name=customer.name|urlencode) }}" 
+                               style="color: #212529; font-weight: 600; font-size: 0.95rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                               onclick="event.stopPropagation();">
+                                {{ customer.name }}
+                            </a>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                                <span class="mini-badge badge-warning">📅 {{ customer.days_since_last_order }}d</span>
+                                {% if customer.is_credit_blocked %}
+                                    <span class="mini-badge badge-blocked">⛔ Recovery First</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="product-count">{{ customer.product_alerts|length }}</div>
+                    </div>
+                    
+                    <div class="customer-card-products">
+                        {% for alert in customer.product_alerts[:3] %}
+                        <span class="mini-product-tag {{ 'trending' if alert.is_trending else '' }}">
+                            {{ alert.product_name }}{% if alert.is_trending %} 🔥{% endif %}
+                            <span class="overdue-badge">+{{ alert.days_overdue }}d</span>
+                        </span>
+                        {% endfor %}
+                        {% if customer.product_alerts|length > 3 %}
+                        <span class="mini-product-tag more-indicator">+{{ customer.product_alerts|length - 3 }} more</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if customer.product_alerts|length > 3 %}
+                    <div class="customer-card-expanded" style="display: none;">
+                        {% for alert in customer.product_alerts[3:] %}
+                        <span class="mini-product-tag {{ 'trending' if alert.is_trending else '' }}">
+                            {{ alert.product_name }}{% if alert.is_trending %} 🔥{% endif %}
+                            <span class="overdue-badge">+{{ alert.days_overdue }}d</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            {% if lost_customers %}
+            <div class="status-group-header lost">
+                🔴 Lost Customers ({{ lost_customers|length }}) - 60+ days inactive
+            </div>
+            <div class="customer-grid">
+                {% for customer in lost_customers %}
+                <div class="customer-card-mini {% if customer.is_credit_blocked %}credit-blocked{% endif %}" onclick="toggleExpand(this)">
+                    <div class="customer-card-header">
+                        <div style="flex: 1; min-width: 0;">
+                            <a href="{{ url_for('customer_deep_dive', name=customer.name|urlencode) }}" 
+                               style="color: #212529; font-weight: 600; font-size: 0.95rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                               onclick="event.stopPropagation();">
+                                {{ customer.name }}
+                            </a>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                                <span class="mini-badge badge-danger">📅 {{ customer.days_since_last_order }}d</span>
+                                {% if customer.is_credit_blocked %}
+                                    <span class="mini-badge badge-blocked">⛔ Recovery First</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="product-count">{{ customer.product_alerts|length }}</div>
+                    </div>
+                    
+                    <div class="customer-card-products">
+                        {% for alert in customer.product_alerts[:3] %}
+                        <span class="mini-product-tag {{ 'trending' if alert.is_trending else '' }}">
+                            {{ alert.product_name }}{% if alert.is_trending %} 🔥{% endif %}
+                            <span class="overdue-badge">+{{ alert.days_overdue }}d</span>
+                        </span>
+                        {% endfor %}
+                        {% if customer.product_alerts|length > 3 %}
+                        <span class="mini-product-tag more-indicator">+{{ customer.product_alerts|length - 3 }} more</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if customer.product_alerts|length > 3 %}
+                    <div class="customer-card-expanded" style="display: none;">
+                        {% for alert in customer.product_alerts[3:] %}
+                        <span class="mini-product-tag {{ 'trending' if alert.is_trending else '' }}">
+                            {{ alert.product_name }}{% if alert.is_trending %} 🔥{% endif %}
+                            <span class="overdue-badge">+{{ alert.days_overdue }}d</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            {% if not active_customers and not drifting_customers and not lost_customers %}
+            <p style="text-align: center; color: #6c757d; padding: 2rem;">No alerts for this selection. All clear! ✅</p>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Section 2: Recovery Follow-ups -->
+<div class="card">
+    <h3 class="card-title"><i class="fas fa-hand-holding-usd"></i> Recovery Follow-ups ({{ recovery_list|length }})</h3>
+    <p class="text-muted" style="margin-top: -1rem; margin-bottom: 1rem;">Customers requiring payment collection attention</p>
+    
+    {% if recovery_list %}
+    <div class="table-wrapper" style="overflow-x: auto;">
+        <table class="recovery-table">
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Last Invoice</th>
+                    <th>Balance</th>
+                    <th>Credit Score</th>
+                    <th>Weeks Owing</th>
+                    <th>DSO (Days)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in recovery_list %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('customer_deep_dive', name=item.customer_name|urlencode) }}" style="font-weight: 600;">
+                            {{ item.customer_name }}
+                        </a>
+                    </td>
+                    <td>{{ item.days_since_invoice }} days ago</td>
+                    <td style="font-weight: 700; color: #ef4444;">PKR {{ "{:,.0f}".format(item.balance) }}</td>
+                    <td>
+                        <span class="recovery-badge score-{{ item.c_score }}">{{ item.c_score }}/5</span>
+                    </td>
+                    <td style="font-weight: 600; color: #f59e0b;">{{ item.weeks_owing }} weeks</td>
+                    <td style="color: #64748b;">{{ item.dso_days }} days</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: #6c757d; padding: 2rem;">No recovery issues on this route. Excellent! 💚</p>
+    {% endif %}
+</div>
+
+<!-- Section 3: Cross-Sell Opportunities -->
+<div class="card">
+    <h3 class="card-title"><i class="fas fa-lightbulb"></i> Cross-Sell Opportunities ({{ cross_sell|length }})</h3>
+    <p class="text-muted" style="margin-top: -1rem; margin-bottom: 1rem;">Smart suggestions based on buying patterns of similar customers</p>
+    <div class="table-wrapper">
+        <table id="crossSellTable">
+            <thead>
+                <tr>
+                    <th class="sortable" onclick="sortTable(0)">Customer</th>
+                    <th class="sortable" onclick="sortTable(1)">Suggested Products</th>
+                    <th class="sortable" onclick="sortTable(2)">Suggestions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cross_sell %}
+                <tr>
+                    <td><a href="{{ url_for('customer_deep_dive', name=item.customer_name|urlencode) }}"><strong>{{ item.customer_name }}</strong></a></td>
+                    <td>
+                        {% for opp in item.opportunities %}
+                        <span class="badge badge-info" style="margin-right: 0.25rem;">
+                            {{ opp.name }}{% if opp.is_trending %} 🔥{% endif %}
+                        </span>
+                        {% endfor %}
+                    </td>
+                    <td style="text-align: center;">{{ item.opportunities|length }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" style="text-align: center;">No cross-sell opportunities found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function sortTable(columnIndex) {
+    const table = document.getElementById('crossSellTable');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Skip if no data
+    if (rows.length === 1 && rows[0].cells.length === 1) return;
+    
+    const isNumeric = columnIndex === 2;
+    
+    rows.sort((a, b) => {
+        const aVal = a.cells[columnIndex].textContent.trim();
+        const bVal = b.cells[columnIndex].textContent.trim();
+        
+        if (isNumeric) {
+            return parseInt(bVal) - parseInt(aVal);
+        }
+        return aVal.localeCompare(bVal);
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function toggleViewMode(mode) {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('view', mode);
+    window.location.href = currentUrl.toString();
+}
+
+function toggleExpand(card) {
+    const expanded = card.querySelector('.customer-card-expanded');
+    if (expanded && expanded.children.length > 0) {
+        if (expanded.style.display === 'none' || expanded.style.display === '') {
+            expanded.style.display = 'flex';
+            card.classList.add('expanded');
+        } else {
+            expanded.style.display = 'none';
+            card.classList.remove('expanded');
+        }
+    }
+}
+</script>
+{% endblock %}

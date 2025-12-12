@@ -1,0 +1,978 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    /* Enhanced Filters Section */
+    .filters-card {
+        background: var(--surface);
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 2px solid var(--border);
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 24px var(--shadow);
+    }
+
+    .filters-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .filters-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .filters-form {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        flex: 1;
+        min-width: 150px;
+    }
+
+    .filter-group label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .kpi-card {
+        background: linear-gradient(135deg, var(--surface) 0%, var(--bg) 100%);
+        padding: 1.8rem;
+        border-radius: 16px;
+        border: 2px solid var(--border);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+        animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 0.5; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 16px 40px var(--shadow-hover);
+        border-color: var(--primary);
+    }
+
+    .kpi-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .kpi-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.3);
+    }
+
+    .kpi-icon.primary {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+    }
+
+    .kpi-icon.success {
+        background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+        color: white;
+    }
+
+    .kpi-icon.info {
+        background: linear-gradient(135deg, var(--info) 0%, #2563eb 100%);
+        color: white;
+    }
+
+    .kpi-icon.warning {
+        background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+        color: white;
+    }
+
+    .kpi-trend {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.3rem 0.6rem;
+        border-radius: 8px;
+    }
+
+    .kpi-trend.up {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+    }
+
+    .kpi-trend.down {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger);
+    }
+
+    .kpi-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .kpi-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .kpi-value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: var(--text);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+    }
+
+    .kpi-subtitle {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    /* Chart Cards */
+    .chart-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .chart-card {
+        background: var(--surface);
+        padding: 2rem;
+        border-radius: 16px;
+        border: 2px solid var(--border);
+        box-shadow: 0 4px 24px var(--shadow);
+    }
+
+    .chart-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    .chart-card-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .chart-card-title i {
+        color: var(--primary);
+    }
+
+    .chart-filter {
+        padding: 0.5rem 1rem;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text);
+        background: var(--surface);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .chart-filter:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .chart-container {
+        position: relative;
+        height: 320px;
+    }
+
+    .chart-container.small {
+        height: 280px;
+    }
+
+    /* Risk Section */
+    .risk-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .risk-summary-card {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        border: 2px solid var(--danger);
+    }
+
+    .risk-summary-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #991b1b;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .risk-stat {
+        background: white;
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .risk-stat-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .risk-stat-value {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: var(--text);
+    }
+
+    .risk-stat-value.danger {
+        color: var(--danger);
+    }
+
+    .risk-stat-value.success {
+        color: var(--success);
+    }
+
+    .risk-action-btn {
+        width: 100%;
+        margin-top: 1rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .risk-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 30px -6px rgba(239, 68, 68, 0.6);
+    }
+
+    /* Performance Table */
+    .performance-card {
+        background: var(--surface);
+        padding: 2rem;
+        border-radius: 16px;
+        border: 2px solid var(--border);
+        box-shadow: 0 4px 24px var(--shadow);
+    }
+
+    .performance-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .performance-table thead th {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .performance-table thead th:first-child {
+        border-top-left-radius: 12px;
+    }
+
+    .performance-table thead th:last-child {
+        border-top-right-radius: 12px;
+    }
+
+    .performance-table tbody tr {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border-light);
+        transition: all 0.2s ease;
+    }
+
+    .performance-table tbody tr:hover {
+        background: var(--bg);
+        transform: scale(1.01);
+        box-shadow: 0 4px 12px var(--shadow);
+    }
+
+    .performance-table tbody td {
+        padding: 1rem;
+        color: var(--text);
+    }
+
+    .performance-table tbody tr:last-child td:first-child {
+        border-bottom-left-radius: 12px;
+    }
+
+    .performance-table tbody tr:last-child td:last-child {
+        border-bottom-right-radius: 12px;
+    }
+
+    .performance-link {
+        color: var(--primary);
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .performance-link:hover {
+        color: var(--primary-dark);
+        text-decoration: underline;
+    }
+
+    .view-details-btn {
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, var(--info) 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .view-details-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px -6px rgba(59, 130, 246, 0.6);
+        color: white;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-secondary);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .chart-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .risk-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .kpi-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .filters-form {
+            flex-direction: column;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+
+        .kpi-value {
+            font-size: 1.8rem;
+        }
+
+        .chart-container {
+            height: 250px;
+        }
+
+        .performance-table {
+            font-size: 0.85rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Filters Section -->
+<div class="filters-card">
+    <div class="filters-header">
+        <div class="filters-title">
+            <i class="fas fa-filter"></i>
+            Date Range Filter
+        </div>
+    </div>
+    <div class="filters-form">
+        <form method="GET" style="display: flex; gap: 1rem; flex: 1; flex-wrap: wrap;">
+            <div class="filter-group">
+                <label for="start">Start Date</label>
+                <input type="date" name="start" id="start" value="{{ start_date }}" required>
+            </div>
+            <div class="filter-group">
+                <label for="end">End Date</label>
+                <input type="date" name="end" id="end" value="{{ end_date }}" required>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-search"></i>
+                    <span>Apply Filter</span>
+                </button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-success" style="background: linear-gradient(135deg, var(--text-secondary) 0%, #475569 100%);">
+                    <i class="fas fa-redo"></i>
+                    <span>Reset</span>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <div class="kpi-icon primary">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+        </div>
+        <div class="kpi-content">
+            <div class="kpi-label">Total Sales</div>
+            <div class="kpi-value">{{ "{:,.0f}".format(summary.total_sales) }}</div>
+            <div class="kpi-subtitle">
+                <i class="fas fa-coins"></i>
+                PKR Revenue
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <div class="kpi-icon success">
+                <i class="fas fa-boxes"></i>
+            </div>
+        </div>
+        <div class="kpi-content">
+            <div class="kpi-label">Units Sold</div>
+            <div class="kpi-value">{{ "{:,.0f}".format(summary.total_units) }}</div>
+            <div class="kpi-subtitle">
+                <i class="fas fa-box"></i>
+                Total Quantity
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <div class="kpi-icon info">
+                <i class="fas fa-receipt"></i>
+            </div>
+        </div>
+        <div class="kpi-content">
+            <div class="kpi-label">Transactions</div>
+            <div class="kpi-value">{{ "{:,.0f}".format(summary.total_transactions) }}</div>
+            <div class="kpi-subtitle">
+                <i class="fas fa-file-invoice"></i>
+                Invoice Count
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-header">
+            <div class="kpi-icon warning">
+                <i class="fas fa-star"></i>
+            </div>
+        </div>
+        <div class="kpi-content">
+            <div class="kpi-label">Avg Credit Score</div>
+            <div class="kpi-value">{{ "{:,.1f}".format(summary.avg_credit_score) }}</div>
+            <div class="kpi-subtitle">
+                <i class="fas fa-chart-line"></i>
+                Customer Health
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 1: Sales Trend & Top Performers -->
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <div class="chart-card-title">
+                <i class="fas fa-chart-line"></i>
+                Monthly Sales Trend
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="salesTrendChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <div class="chart-card-title">
+                <i class="fas fa-medal"></i>
+                Top 8 Orderbookers
+            </div>
+        </div>
+        <div class="chart-container small">
+            <canvas id="topPerformersChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2: Company Distribution & Performance Table -->
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <div class="chart-card-title">
+                <i class="fas fa-building"></i>
+                Company Sales Distribution
+            </div>
+            <select class="chart-filter" id="companyFilter" onchange="updateCompanyChart()">
+                {% for month in summary.company_months %}
+                <option value="{{ month }}">{{ month }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="chart-container small">
+            <canvas id="companyChart"></canvas>
+        </div>
+    </div>
+
+    <div class="performance-card">
+        <div class="chart-card-header">
+            <div class="chart-card-title">
+                <i class="fas fa-users"></i>
+                Orderbooker Performance
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="performance-table">
+                <thead>
+                    <tr>
+                        <th>Orderbooker</th>
+                        <th>Sales (PKR)</th>
+                        <th>% Share</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set total_sales = summary.total_sales %}
+                    {% for orderbooker in summary.orderbooker_sales[:8] %}
+                    {% set percentage = (orderbooker.net_amount / total_sales) * 100 if total_sales else 0 %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('orderbooker_details', name=orderbooker.orderbooker) }}" class="performance-link">
+                                {{ orderbooker.orderbooker }}
+                            </a>
+                        </td>
+                        <td>{{ "{:,.0f}".format(orderbooker.net_amount) }}</td>
+                        <td>
+                            <span class="badge {% if percentage > 15 %}badge-success{% elif percentage > 10 %}badge-warning{% else %}badge-info{% endif %}">
+                                {{ "{:.1f}%".format(percentage) }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('orderbooker_details', name=orderbooker.orderbooker) }}" class="view-details-btn">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>No orderbooker data available</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Risk Section -->
+<div class="risk-grid">
+    <div class="risk-summary-card">
+        <div class="risk-summary-title">
+            <i class="fas fa-exclamation-triangle"></i>
+            Credit Risk Summary
+        </div>
+        
+        <div class="risk-stat">
+            <div class="risk-stat-label">Outstanding Balance</div>
+            <div class="risk-stat-value danger">{{ "{:,.0f}".format(summary.outstanding_balance) }} PKR</div>
+        </div>
+
+        <div class="risk-stat">
+            <div class="risk-stat-label">High-Risk Customers</div>
+            <div class="risk-stat-value danger">{{ summary.high_risk_count }}</div>
+        </div>
+
+        <div class="risk-stat">
+            <div class="risk-stat-label">Growth Potential</div>
+            <div class="risk-stat-value success">{{ summary.growth_potential_count }}</div>
+        </div>
+
+        <div class="risk-stat">
+            <div class="risk-stat-label">Neutral Customers</div>
+            <div class="risk-stat-value">{{ summary.neutral_count }}</div>
+        </div>
+
+        <a href="{{ url_for('high_risk') }}" class="risk-action-btn">
+            <i class="fas fa-list"></i>
+            View High-Risk List
+        </a>
+    </div>
+
+    <div class="performance-card">
+        <div class="chart-card-header">
+            <div class="chart-card-title" style="color: var(--danger);">
+                <i class="fas fa-skull-crossbones"></i>
+                Top 5 Riskiest Customers
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="performance-table">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Score</th>
+                        <th>Balance (PKR)</th>
+                        <th>Days Since</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in summary.risky_customers %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('customer_details', name=customer.customer_name) }}" class="performance-link" style="color: var(--danger);">
+                                {{ customer.customer_name }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge badge-danger">{{ "{:.1f}".format(customer.credit_score) }}</span>
+                        </td>
+                        <td style="color: var(--danger); font-weight: 700;">{{ "{:,.0f}".format(customer.balance) }}</td>
+                        <td>{{ customer.days_since }} days</td>
+                        <td>
+                            <a href="{{ url_for('customer_details', name=customer.customer_name) }}" class="view-details-btn">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <i class="fas fa-check-circle"></i>
+                            <p>No high-risk customers found</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Data from Flask
+const monthlySalesChartData = {{ summary.monthly_sales_chart | tojson }};
+const topPerformersChartData = {{ summary.sorted_orderbookers | tojson }};
+const companyDistributionDataRaw = {{ summary.monthly_by_company_chart | tojson }};
+
+// Generate vibrant colors
+function generateColors(count) {
+    const colors = [
+        '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+        '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16',
+        '#a855f7', '#22c55e', '#eab308', '#f43f5e', '#3b82f6'
+    ];
+    return colors.slice(0, count);
+}
+
+// Chart.js default config
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size = 13;
+Chart.defaults.color = '#64748b';
+
+// Sales Trend Chart
+const salesTrendChart = new Chart(document.getElementById('salesTrendChart'), {
+    type: 'line',
+    data: {
+        labels: monthlySalesChartData.labels,
+        datasets: [
+            {
+                label: 'Current Year',
+                data: monthlySalesChartData.data,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: '#10b981',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            },
+            {
+                label: 'Last Year',
+                data: monthlySalesChartData.data_last_year,
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3,
+                borderDash: [8, 4],
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: '#ef4444',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false
+        },
+        plugins: {
+            legend: {
+                position: 'top',
+                labels: {
+                    padding: 15,
+                    font: { size: 13, weight: '600' },
+                    usePointStyle: true,
+                    pointStyle: 'circle'
+                }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                titleFont: { size: 14, weight: '700' },
+                bodyFont: { size: 13 },
+                callbacks: {
+                    label: context => context.dataset.label + ': PKR ' + context.parsed.y.toLocaleString()
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                ticks: {
+                    callback: value => 'PKR ' + (value / 1000).toFixed(0) + 'K'
+                }
+            },
+            x: {
+                grid: { display: false }
+            }
+        }
+    }
+});
+
+// Top Performers Doughnut Chart
+const performerColors = generateColors(topPerformersChartData.labels.length);
+
+const topPerformersChart = new Chart(document.getElementById('topPerformersChart'), {
+    type: 'doughnut',
+    data: {
+        labels: topPerformersChartData.labels,
+        datasets: [{
+            data: topPerformersChartData.data,
+            backgroundColor: performerColors,
+            borderWidth: 3,
+            borderColor: '#fff',
+            hoverOffset: 10
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    padding: 12,
+                    font: { size: 12, weight: '600' },
+                    usePointStyle: true,
+                    pointStyle: 'circle'
+                }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                callbacks: {
+                    label: context => {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                        return context.label + ': PKR ' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Company Distribution Chart
+const defaultCompanyData = companyDistributionDataRaw.find(d => d.month === 'All') || companyDistributionDataRaw[0];
+const companyColors = generateColors(defaultCompanyData ? defaultCompanyData.labels.length : 0);
+
+const companyChart = new Chart(document.getElementById('companyChart'), {
+    type: 'pie',
+    data: {
+        labels: defaultCompanyData ? defaultCompanyData.labels : [],
+        datasets: [{
+            data: defaultCompanyData ? defaultCompanyData.data : [],
+            backgroundColor: companyColors,
+            borderWidth: 3,
+            borderColor: '#fff',
+            hoverOffset: 10
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    padding: 12,
+                    font: { size: 12, weight: '600' },
+                    usePointStyle: true,
+                    pointStyle: 'circle'
+                }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                callbacks: {
+                    label: context => {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                        return context.label + ': PKR ' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Update Company Chart based on filter
+function updateCompanyChart() {
+    const month = document.getElementById('companyFilter').value;
+    const data = companyDistributionDataRaw.find(d => d.month === month);
+
+    if (data) {
+        const newColors = generateColors(data.labels.length);
+        companyChart.data.labels = data.labels;
+        companyChart.data.datasets[0].data = data.data;
+        companyChart.data.datasets[0].backgroundColor = newColors;
+        companyChart.update('active');
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const filter = document.getElementById('companyFilter');
+    if (filter && filter.options.length > 0) {
+        const allOption = Array.from(filter.options).find(opt => opt.value === 'All');
+        filter.value = allOption ? 'All' : filter.options[0].value;
+    }
+    updateCompanyChart();
+});
+</script>
+{% endblock %}

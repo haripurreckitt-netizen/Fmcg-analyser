@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+</html>
+<head>
+    <title>All Customers</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .header .count {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin: 20px 30px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .filters {
+            padding: 25px 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: 11px;
+            color: #6c757d;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 10px 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+
+        .stats-bar {
+            padding: 25px 30px;
+            background: #fff;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .stat-card {
+            padding: 18px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #667eea08 0%, #764ba208 100%);
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .stat-card .label {
+            font-size: 11px;
+            color: #6c757d;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .value {
+            font-size: 26px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .table-container {
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            padding: 15px 10px;
+            text-align: left;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        th:hover {
+            background: rgba(255,255,255,0.15);
+        }
+
+        th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.5;
+            font-size: 11px;
+        }
+
+        th.sort-asc::after {
+            content: ' ▲';
+            opacity: 1;
+        }
+
+        th.sort-desc::after {
+            content: ' ▼';
+            opacity: 1;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #e9ecef;
+            transition: all 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+            transform: scale(1.002);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        td {
+            padding: 14px 10px;
+        }
+
+        td a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        td a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-champions { background: #d4edda; color: #155724; }
+        .badge-loyal { background: #d1ecf1; color: #0c5460; }
+        .badge-potential { background: #fff3cd; color: #856404; }
+        .badge-at-risk { background: #f8d7da; color: #721c24; }
+        .badge-dormant { background: #e2e3e5; color: #383d41; }
+        .badge-high-risk { background: #f5c6cb; color: #721c24; font-weight: 800; }
+        .badge-credit-risk { background: #f8d7da; color: #721c24; }
+        .badge-review-pricing { background: #fff3cd; color: #856404; }
+
+        .negative { color: #e53e3e; font-weight: 600; }
+        .positive { color: #38a169; font-weight: 600; }
+        .neutral { color: #718096; }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .no-data h3 {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .filters {
+                grid-template-columns: 1fr;
+            }
+
+            .table-container {
+                padding: 15px;
+            }
+
+            table {
+                font-size: 11px;
+            }
+
+            th, td {
+                padding: 8px 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>All Customers</h1>
+            <div class="count" id="customerCount">Loading...</div>
+        </div>
+
+        <a href="{{ url_for('dashboard') }}" class="back-link">← Back to Dashboard</a>
+
+        <form method="GET" action="{{ url_for('high_risk') }}">
+            <div class="filters">
+                <div class="filter-group">
+                    <label>📅 Date Range</label>
+                    <select name="date_range" id="dateRangeFilter">
+                        <option value="all" {% if date_range == 'all' %}selected{% endif %}>All Time</option>
+                        <option value="current_year" {% if date_range == 'current_year' %}selected{% endif %}>Current Year (2025)</option>
+                        <option value="last_year" {% if date_range == 'last_year' %}selected{% endif %}>Last Year (2024)</option>
+                        <option value="current_month" {% if date_range == 'current_month' %}selected{% endif %}>Current Month</option>
+                        <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>Last Month</option>
+                        <option value="last_3_months" {% if date_range == 'last_3_months' %}selected{% endif %}>Last 3 Months</option>
+                        <option value="last_6_months" {% if date_range == 'last_6_months' %}selected{% endif %}>Last 6 Months</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>🎯 Customer Segment</label>
+                    <select id="segmentFilter">
+                        <option value="">All Segments</option>
+                        <option value="Champions">🏆 Champions</option>
+                        <option value="Loyal">💎 Loyal</option>
+                        <option value="Potential">📈 Potential</option>
+                        <option value="At Risk">📉 At Risk</option>
+                        <option value="Dormant">💤 Dormant</option>
+                        <option value="High Risk">🚨 High Risk</option>
+                        <option value="Credit Risk">⚠️ Credit Risk</option>
+                        <option value="Review Pricing">💸 Review Pricing</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>📍 Route</label>
+                    <select id="routeFilter">
+                        <option value="">All Routes</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>🏢 Company</label>
+                    <select id="companyFilter">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>🔍 Search</label>
+                    <input type="text" id="searchInput" placeholder="Name or code...">
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">Apply Date Filter</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="label">Total Customers</div>
+                <div class="value" id="totalCustomers">{{ total_customers }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Sales (Period)</div>
+                <div class="value" id="totalSales">PKR 0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Profit (Period)</div>
+                <div class="value" id="totalProfit">PKR 0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Current Balance</div>
+                <div class="value" id="totalBalance">PKR 0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Avg Margin %</div>
+                <div class="value" id="avgMargin">0%</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            {% if customers %}
+            <table id="customerTable">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-column="0">Code</th>
+                        <th class="sortable" data-column="1">Customer Name</th>
+                        <th class="sortable" data-column="2">Route</th>
+                        <th class="sortable" data-column="3">Segment</th>
+                        <th class="sortable" data-column="4">Sales (PKR)</th>
+                        <th class="sortable" data-column="5">Profit (PKR)</th>
+                        <th class="sortable" data-column="6">Margin %</th>
+                        <th class="sortable" data-column="7">Balance (PKR)</th>
+                        <th class="sortable" data-column="8">Orders</th>
+                        <th class="sortable" data-column="9">Last Order</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    {% for customer in customers %}
+                    <tr data-route="{{ customer.route }}" 
+                        data-company="{{ customer.company }}"
+                        data-segment="{{ customer.segment }}">
+                        <td>{{ customer.customer_code }}</td>
+                        <td>
+                            <a href="{{ url_for('customer_details', name=customer.customer_name | urlencode) }}">
+                                {{ customer.customer_name }}
+                            </a>
+                        </td>
+                        <td>{{ customer.route }}</td>
+                        <td>
+                            <span class="badge badge-{{ customer.segment.lower().replace(' ', '-').replace('🏆', '').replace('💎', '').replace('📈', '').replace('📉', '').replace('💤', '').replace('🚨', '').replace('⚠️', '').replace('💸', '').strip() }}">
+                                {{ customer.segment }}
+                            </span>
+                        </td>
+                        <td>{{ '{:,.0f}'.format(customer.sales) }}</td>
+                        <td class="{% if customer.profit >= 0 %}positive{% else %}negative{% endif %}">
+                            {{ '{:,.0f}'.format(customer.profit) }}
+                        </td>
+                        <td class="{% if customer.margin >= 5 %}positive{% elif customer.margin >= 3 %}neutral{% else %}negative{% endif %}">
+                            {{ '{:.1f}'.format(customer.margin) }}%
+                        </td>
+                        <td class="{% if customer.balance > 0 %}negative{% elif customer.balance < 0 %}positive{% else %}neutral{% endif %}">
+                            {{ '{:,.0f}'.format(customer.balance) }}
+                        </td>
+                        <td>{{ customer.orders }}</td>
+                        <td>{{ customer.days_since }} days</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-data">
+                <h3>No customers found</h3>
+                <p>Try adjusting your filters or date range</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        const rows = Array.from(document.querySelectorAll('#tableBody tr'));
+        let sortColumn = null;
+        let sortDirection = 'asc';
+
+        // Populate filter dropdowns
+        const routes = new Set();
+        const companies = new Set();
+        
+        rows.forEach(row => {
+            const route = row.dataset.route;
+            const company = row.dataset.company;
+            if (route && route !== 'N/A') routes.add(route);
+            if (company && company !== 'N/A') companies.add(company);
+        });
+
+        const routeFilter = document.getElementById('routeFilter');
+        const companyFilter = document.getElementById('companyFilter');
+        
+        Array.from(routes).sort().forEach(route => {
+            const option = document.createElement('option');
+            option.value = route;
+            option.textContent = route;
+            routeFilter.appendChild(option);
+        });
+
+        Array.from(companies).sort().forEach(company => {
+            const option = document.createElement('option');
+            option.value = company;
+            option.textContent = company;
+            companyFilter.appendChild(option);
+        });
+
+        // Update statistics
+        function updateStats() {
+            const visibleRows = rows.filter(row => row.style.display !== 'none');
+            let totalSales = 0, totalProfit = 0, totalBalance = 0, totalMargin = 0, marginCount = 0;
+
+            visibleRows.forEach(row => {
+                const cells = row.cells;
+                totalSales += parseFloat(cells[4].textContent.replace(/,/g, '')) || 0;
+                totalProfit += parseFloat(cells[5].textContent.replace(/,/g, '')) || 0;
+                totalBalance += parseFloat(cells[7].textContent.replace(/,/g, '')) || 0;
+                
+                const marginText = cells[6].textContent.replace('%', '').trim();
+                const margin = parseFloat(marginText);
+                if (!isNaN(margin) && margin !== 0) {
+                    totalMargin += margin;
+                    marginCount++;
+                }
+            });
+
+            document.getElementById('customerCount').textContent = `${visibleRows.length} Customers`;
+            document.getElementById('totalCustomers').textContent = visibleRows.length;
+            document.getElementById('totalSales').textContent = `PKR ${totalSales.toLocaleString('en-PK', {maximumFractionDigits: 0})}`;
+            document.getElementById('totalProfit').textContent = `PKR ${totalProfit.toLocaleString('en-PK', {maximumFractionDigits: 0})}`;
+            document.getElementById('totalBalance').textContent = `PKR ${totalBalance.toLocaleString('en-PK', {maximumFractionDigits: 0})}`;
+            document.getElementById('avgMargin').textContent = marginCount > 0 ? `${(totalMargin / marginCount).toFixed(1)}%` : '0%';
+        }
+
+        // Filter table
+        function filterTable() {
+            const routeValue = routeFilter.value.toLowerCase();
+            const companyValue = companyFilter.value.toLowerCase();
+            const segmentValue = document.getElementById('segmentFilter').value.toLowerCase();
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+
+            rows.forEach(row => {
+                const route = row.dataset.route.toLowerCase();
+                const company = row.dataset.company.toLowerCase();
+                const segment = row.dataset.segment.toLowerCase();
+                const name = row.cells[1].textContent.toLowerCase();
+                const code = row.cells[0].textContent.toLowerCase();
+
+                const routeMatch = !routeValue || route === routeValue;
+                const companyMatch = !companyValue || company === companyValue;
+                const segmentMatch = !segmentValue || segment.includes(segmentValue.toLowerCase());
+                const searchMatch = !searchValue || name.includes(searchValue) || code.includes(searchValue);
+
+                row.style.display = (routeMatch && companyMatch && segmentMatch && searchMatch) ? '' : 'none';
+            });
+
+            updateStats();
+        }
+
+        // Sort table
+        function sortTable(columnIndex) {
+            const tbody = document.getElementById('tableBody');
+
+            if (sortColumn === columnIndex) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = columnIndex;
+                sortDirection = 'asc';
+            }
+
+            rows.sort((a, b) => {
+                let aVal = a.cells[columnIndex].textContent.trim();
+                let bVal = b.cells[columnIndex].textContent.trim();
+
+                // Numeric columns: 4(sales), 5(profit), 6(margin), 7(balance), 8(orders), 9(days)
+                if ([4, 5, 6, 7, 8, 9].includes(columnIndex)) {
+                    aVal = parseFloat(aVal.replace(/[^0-9.-]/g, '')) || 0;
+                    bVal = parseFloat(bVal.replace(/[^0-9.-]/g, '')) || 0;
+                }
+
+                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+
+            document.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            document.querySelector(`th[data-column="${columnIndex}"]`).classList.add(`sort-${sortDirection}`);
+        }
+
+        // Event listeners
+        routeFilter.addEventListener('change', filterTable);
+        companyFilter.addEventListener('change', filterTable);
+        document.getElementById('segmentFilter').addEventListener('change', filterTable);
+        document.getElementById('searchInput').addEventListener('input', filterTable);
+
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                sortTable(parseInt(th.dataset.column));
+            });
+        });
+
+        // Initial stats
+        updateStats();
+    </script>
+</body>
+</html>

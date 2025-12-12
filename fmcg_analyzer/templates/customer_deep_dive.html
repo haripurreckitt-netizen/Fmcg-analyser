@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Details: {{ customer_name }}{% endblock %}
+{% block page_title %}{{ customer_name }}{% endblock %}
+{% block page_description %}A complete overview of purchase history, credit, and product status.{% endblock %}
+
+{% block content %}
+<style>
+    .sortable { 
+        cursor: pointer; 
+        user-select: none;
+        position: relative;
+        padding-right: 20px;
+    }
+    .sortable:hover { background-color: #f0f0f0; }
+    .sortable::after { 
+        content: ' ⇅'; 
+        opacity: 0.3;
+        position: absolute;
+        right: 5px;
+    }
+    .sortable.asc::after { content: ' ▲'; opacity: 0.8; }
+    .sortable.desc::after { content: ' ▼'; opacity: 0.8; }
+</style>
+
+<!-- KPI Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">PKR {{ "{:,.0f}".format(kpis.total_sales) }}</div>
+        <div class="stat-label">Lifetime Sales</div>
+        <i class="fas fa-chart-line stat-icon"></i>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">PKR {{ "{:,.0f}".format(kpis.total_profit) }}</div>
+        <div class="stat-label">Lifetime Profit</div>
+        <i class="fas fa-piggy-bank stat-icon"></i>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value {{ 'text-danger' if kpis.current_balance > 0 else 'text-success' }}">
+            PKR {{ "{:,.0f}".format(kpis.current_balance) }}
+        </div>
+        <div class="stat-label">Current Balance</div>
+        <i class="fas fa-wallet stat-icon"></i>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ kpis.last_purchase }}</div>
+        <div class="stat-label">Last Purchase</div>
+        <i class="fas fa-calendar-check stat-icon"></i>
+    </div>
+</div>
+
+<!-- Product Status Table -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 class="card-title" style="margin-bottom: 0;">
+            <i class="fas fa-boxes"></i> Product Purchase Status
+        </h3>
+        <form method="GET" style="width: 250px;">
+            <select name="company" class="form-control" onchange="this.form.submit()">
+                {% for c in available_companies %}
+                <option value="{{ c }}" {% if c == company_filter %}selected{% endif %}>{{ c|title }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+    <div class="table-wrapper">
+        <table id="productTable">
+            <thead>
+                <tr>
+                    <th class="sortable" onclick="sortTable(0, 'string')">Product</th>
+                    <th class="sortable" onclick="sortTable(1, 'date')">Last Purchase</th>
+                    <th class="sortable" onclick="sortTable(2, 'number')">Days Since</th>
+                    <th class="sortable" onclick="sortTable(3, 'number')">Normal Qty</th>
+                    <th class="sortable" onclick="sortTable(4, 'number')">Normal Cycle</th>
+                    <th class="sortable" onclick="sortTable(5, 'string')">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in product_list %}
+                <tr>
+                    <td><strong>{{ p.product_name }}</strong></td>
+                    <td data-date="{{ p.last_purchase_date.strftime('%Y-%m-%d') }}">
+                        {{ p.last_purchase_date.strftime('%d %b, %Y') }} ({{ p.last_purchase_qty|int }} units)
+                    </td>
+                    <td>{{ p.days_since_last|int }}</td>
+                    <td>{{ p.median_qty|int }} units</td>
+                    <td>~{{ p.median_cycle|int }} days</td>
+                    <td>
+                        {% if p.status == 'Attention Needed' %}
+                            <span class="badge badge-warning">Attention Needed</span>
+                        {% elif p.status == 'Stock-Up Purchase' %}
+                            <span class="badge badge-info">Stock-Up Purchase</span>
+                        {% elif p.status == 'Seasonal/Annual' %}
+                            <span class="badge badge-secondary">Seasonal/Annual</span>
+                        {% else %}
+                            <span class="badge badge-success">OK</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" style="text-align: center;">No products match the current filter.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let currentSort = { column: -1, direction: 'asc' };
+
+function sortTable(columnIndex, type) {
+    const table = document.getElementById('productTable');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Skip if no data
+    if (rows.length === 1 && rows[0].cells.length === 1) return;
+    
+    // Toggle direction
+    if (currentSort.column === columnIndex) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = columnIndex;
+        currentSort.direction = 'asc';
+    }
+    
+    // Remove all sorting indicators
+    table.querySelectorAll('.sortable').forEach(th => {
+        th.classList.remove('asc', 'desc');
+    });
+    
+    // Add indicator to current column
+    table.querySelectorAll('.sortable')[columnIndex].classList.add(currentSort.direction);
+    
+    // Sort rows
+    rows.sort((a, b) => {
+        let aVal, bVal;
+        
+        if (type === 'number') {
+            aVal = parseInt(a.cells[columnIndex].textContent.replace(/[^0-9]/g, '')) || 0;
+            bVal = parseInt(b.cells[columnIndex].textContent.replace(/[^0-9]/g, '')) || 0;
+        } else if (type === 'date') {
+            aVal = a.cells[columnIndex].dataset.date || '';
+            bVal = b.cells[columnIndex].dataset.date || '';
+        } else {
+            aVal = a.cells[columnIndex].textContent.trim();
+            bVal = b.cells[columnIndex].textContent.trim();
+        }
+        
+        if (currentSort.direction === 'asc') {
+            return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+        } else {
+            return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+        }
+    });
+    
+    // Reorder rows in DOM
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Auto-sort by Days Since (descending) on page load
+window.addEventListener('DOMContentLoaded', () => {
+    sortTable(2, 'number');
+    sortTable(2, 'number'); // Call twice to get descending
+});
+</script>
+{% endblock %}

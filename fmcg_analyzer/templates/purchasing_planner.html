@@ -1,0 +1,115 @@
+<!-- templates/purchasing_planner.html -->
+{% extends "base.html" %}
+
+
+{% block page_title %}
+    {{ title }}
+{% endblock %}
+
+{% block content %}
+
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    
+
+    <!-- Filter Card -->
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Product Purchase Recommendations</h6>
+            
+            <form method="GET" action="{{ url_for('purchasing_planner') }}" class="form-inline">
+                <label for="company" class="sr-only">Filter by Company:</label>
+                <select name="company" id="company" class="form-control form-control-sm mr-2" style="background: #fff; color: #495057;">
+                    {% for company in available_companies %}
+                    <option value="{{ company }}" {% if company == selected_company %}selected{% endif %}>
+                        {{ company.title() }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary btn-sm">Apply Filter</button>
+            </form>
+        </div>
+
+
+
+
+
+
+
+
+
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Status</th>
+                            <th>Product Name</th>
+                            <th>Company</th>
+                            <th>Current Stock</th>
+                            <th>Days of Stock Left</th>
+                            <th>Sales (Last 30d)</th>
+                            <th>Sales (Same Month LY)</th>
+                            <th>Projected Demand</th>
+                            <th class="bg-success text-white">Recommended Purchase Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in product_list %}
+                        <tr>
+                            <td class="text-center">
+                                {% if item.status == 'Critical' %}
+                                <span class="badge badge-danger font-weight-bold p-2">{{ item.status }}</span>
+                                {% elif item.status == 'Recommended' %}
+                                <span class="badge badge-warning font-weight-bold p-2">{{ item.status }}</span>
+                                 {% elif item.status == 'Out of Stock' %}
+                                <span class="badge badge-dark font-weight-bold p-2">{{ item.status }}</span>
+                                {% else %}
+                                <span class="badge badge-success font-weight-bold p-2">{{ item.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.product_name }}</td>
+                            <td>{{ item.company }}</td>
+                            <td><strong>{{ item.stock_quantity }}</strong></td>
+                            <td>{{ item.days_of_stock_left if item.days_of_stock_left != 999 else 'N/A' }} days</td>
+                            <td>{{ item.sales_last_30d }}</td>
+                            <td>{{ item.sales_seasonal }}</td>
+                            <td>{{ item.projected_demand }}</td>
+                            <td class="bg-light">
+                                <strong class="text-danger h5">{{ item.recommended_purchase }}</strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Call the dataTables jQuery plugin
+$(document).ready(function() {
+  $('#dataTable').DataTable({
+    
+    // 1. Removes the 'Search:' box
+    searching: false,
+    
+    // 2. Removes the 'Show X entries' dropdown
+    lengthChange: false,
+    
+    // 3. Fixes the layout and jumbled pagination
+    // 't' = table
+    // 'i' = info ("Showing 1 to 10...")
+    // 'p' = pagination
+    dom:  '<"row"<"col-sm-12"tr>>' +
+          '<"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,685 @@
+{% extends "base.html" %}
+
+{% block page_title %}Company/Product Deep Dive{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: linear-gradient(135deg, var(--surface) 0%, var(--bg) 100%);
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 2px solid var(--border);
+        transition: all 0.3s ease;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px var(--shadow-hover);
+        border-color: var(--primary);
+    }
+
+    .metric-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .metric-icon.primary {
+        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+        color: white;
+    }
+
+    .metric-icon.success {
+        background: linear-gradient(135deg, var(--success-light) 0%, var(--success) 100%);
+        color: white;
+    }
+
+    .metric-icon.warning {
+        background: linear-gradient(135deg, var(--warning-light) 0%, var(--warning) 100%);
+        color: white;
+    }
+
+    .metric-icon.info {
+        background: linear-gradient(135deg, #60a5fa 0%, var(--info) 100%);
+        color: white;
+    }
+
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .filters-section {
+        background: var(--surface);
+        padding: 2rem;
+        border-radius: 16px;
+        border: 2px solid var(--border);
+        margin-bottom: 2rem;
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .filter-group label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .section-title i {
+        color: var(--primary);
+    }
+
+    .tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid var(--border);
+        padding-bottom: 0.5rem;
+    }
+
+    .tab-btn {
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .tab-btn:hover {
+        background: var(--bg);
+        color: var(--primary);
+    }
+
+    .tab-btn.active {
+        color: var(--primary);
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    }
+
+    .tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -0.65rem;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        border-radius: 10px;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+        animation: fadeIn 0.4s ease;
+    }
+
+    .affinity-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .affinity-card {
+        background: var(--surface);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 2px solid var(--border);
+    }
+
+    .affinity-product {
+        font-weight: 600;
+        color: var(--primary);
+        margin-bottom: 1rem;
+        font-size: 1rem;
+    }
+
+    .affinity-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .affinity-list li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .affinity-list li:last-child {
+        border-bottom: none;
+    }
+
+    .affinity-score {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--success);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-secondary);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 2rem;
+    }
+
+    @media (max-width: 768px) {
+        .metrics-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-actions {
+            flex-direction: column;
+        }
+
+        .affinity-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Filters Section -->
+<div class="filters-section">
+    <h3 class="section-title">
+        <i class="fas fa-filter"></i>
+        Filters
+    </h3>
+    <form method="GET" action="{{ url_for('company_product_deep_dive') }}">
+        <div class="filter-grid">
+            <div class="filter-group">
+                <label for="company">Company</label>
+                <select name="company" id="company" class="form-control">
+                    <option value="all" {% if selected_company == 'all' %}selected{% endif %}>All Companies</option>
+                    {% for company in filter_options.companies %}
+                    <option value="{{ company }}" {% if selected_company == company %}selected{% endif %}>{{ company }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="route">Route</label>
+                <select name="route" id="route" class="form-control">
+                    <option value="all" {% if selected_route == 'all' %}selected{% endif %}>All Routes</option>
+                    {% for route in filter_options.routes %}
+                    <option value="{{ route }}" {% if selected_route == route %}selected{% endif %}>{{ route }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="product">Product</label>
+                <select name="product" id="product" class="form-control">
+                    <option value="all" {% if selected_product == 'all' %}selected{% endif %}>All Products</option>
+                    {% for product in filter_options.products %}
+                    <option value="{{ product }}" {% if selected_product == product %}selected{% endif %}>{{ product }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="start_date">Start Date</label>
+                <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+
+            <div class="filter-group">
+                <label for="end_date">End Date</label>
+                <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-search"></i>
+                <span>Apply Filters</span>
+            </button>
+            <a href="?export=true&company={{ selected_company }}&route={{ selected_route }}&product={{ selected_product }}&start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-success">
+                <i class="fas fa-download"></i>
+                <span>Export to Excel</span>
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Metrics Grid -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-icon primary">
+            <i class="fas fa-dollar-sign"></i>
+        </div>
+        <div class="metric-value">{{ total_sales }}</div>
+        <div class="metric-label">Total Sales</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon success">
+            <i class="fas fa-boxes"></i>
+        </div>
+        <div class="metric-value">{{ total_quantity }}</div>
+        <div class="metric-label">Total Quantity</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon warning">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="metric-value">{{ unique_customers }}</div>
+        <div class="metric-label">Unique Customers</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon info">
+            <i class="fas fa-shopping-bag"></i>
+        </div>
+        <div class="metric-value">{{ unique_products }}</div>
+        <div class="metric-label">Unique Products</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon primary">
+            <i class="fas fa-map-marked-alt"></i>
+        </div>
+        <div class="metric-value">{{ unique_routes }}</div>
+        <div class="metric-label">Active Routes</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon success">
+            <i class="fas fa-receipt"></i>
+        </div>
+        <div class="metric-value">{{ avg_order_value }}</div>
+        <div class="metric-label">Avg Order Value</div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('pareto')">
+        <i class="fas fa-chart-bar"></i> Pareto Analysis
+    </button>
+    <button class="tab-btn" onclick="switchTab('routes')">
+        <i class="fas fa-route"></i> Route Performance
+    </button>
+    <button class="tab-btn" onclick="switchTab('cycle')">
+        <i class="fas fa-sync"></i> Cycle Health
+    </button>
+    <button class="tab-btn" onclick="switchTab('dropoffs')">
+        <i class="fas fa-user-times"></i> Customer Dropoffs
+    </button>
+    <button class="tab-btn" onclick="switchTab('affinity')">
+        <i class="fas fa-link"></i> Product Affinity
+    </button>
+</div>
+
+<!-- Tab Contents -->
+<div id="pareto-tab" class="tab-content active">
+    <div class="card">
+        <h3 class="section-title">
+            <i class="fas fa-trophy"></i>
+            Top Customers (80% of Sales)
+        </h3>
+        <div class="table-responsive">
+            <table class="table" id="customersTable">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Customer</th>
+                        <th>Sales Amount</th>
+                        <th>Cumulative %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in customer_summary %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ row.customer_name }}</td>
+                        <td>{{ row.amount_formatted }}</td>
+                        <td>
+                            <span class="badge {% if row.percent <= 50 %}badge-success{% elif row.percent <= 80 %}badge-warning{% else %}badge-info{% endif %}">
+                                {{ row.percent_formatted }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 class="section-title">
+            <i class="fas fa-box-open"></i>
+            Top Products (80% of Sales)
+        </h3>
+        <div class="table-responsive">
+            <table class="table" id="productsTable">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Product</th>
+                        <th>Sales Amount</th>
+                        <th>Cumulative %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in product_summary %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ row.product_name }}</td>
+                        <td>{{ row.amount_formatted }}</td>
+                        <td>
+                            <span class="badge {% if row.percent <= 50 %}badge-success{% elif row.percent <= 80 %}badge-warning{% else %}badge-info{% endif %}">
+                                {{ row.percent_formatted }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="routes-tab" class="tab-content">
+    <div class="card">
+        <h3 class="section-title">
+            <i class="fas fa-route"></i>
+            Route Performance Summary
+        </h3>
+        <div class="table-responsive">
+            <table class="table" id="routesTable">
+                <thead>
+                    <tr>
+                        <th>Route</th>
+                        <th>Total Sales</th>
+                        <th>Total Quantity</th>
+                        <th>Active Customers</th>
+                        <th>Products</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in route_summary %}
+                    <tr>
+                        <td><strong>{{ row.route }}</strong></td>
+                        <td>{{ row.total_sales_formatted }}</td>
+                        <td>{{ row.total_quantity_formatted }}</td>
+                        <td>{{ row.active_customers }}</td>
+                        <td>{{ row.product_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="cycle-tab" class="tab-content">
+    <div class="card">
+        <h3 class="section-title">
+            <i class="fas fa-heartbeat"></i>
+            Customer Purchase Cycle Health
+        </h3>
+        <div class="table-responsive">
+            <table class="table" id="cycleTable">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Product</th>
+                        <th>Last Purchase</th>
+                        <th>Days Since</th>
+                        <th>Median Cycle</th>
+                        <th>Last Qty</th>
+                        <th>Median Qty</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in cycle_health %}
+                    <tr>
+                        <td>{{ row.customer_name }}</td>
+                        <td>{{ row.product_name }}</td>
+                        <td>{{ row.last_purchase_formatted }}</td>
+                        <td>{{ row.days_since_last }}</td>
+                        <td>{{ row.median_cycle_formatted }}</td>
+                        <td>{{ row.last_purchase_qty|int }}</td>
+                        <td>{{ row.median_qty|int }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if row.status == '⚠️ Attention Needed' %}badge-danger
+                                {% elif row.status == 'Stock-Up (OK)' %}badge-info
+                                {% elif row.status == 'Seasonal/Inactive' %}badge-warning
+                                {% elif row.status == 'New Customer' %}badge-info
+                                {% elif row.status == 'Frequent Buyer' %}badge-success
+                                {% else %}badge-success{% endif %}">
+                                {{ row.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="dropoffs-tab" class="tab-content">
+    <div class="card">
+        <h3 class="section-title">
+            <i class="fas fa-exclamation-triangle"></i>
+            Customer Dropoffs (60+ Days Inactive)
+        </h3>
+        {% if dropoff_customers|length > 0 %}
+        <div class="table-responsive">
+            <table class="table" id="dropoffsTable">
+                <thead>
+                    <tr>
+                        <th>Customer Name</th>
+                        <th>Last Purchase Date</th>
+                        <th>Days Since Purchase</th>
+                        <th>Risk Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in dropoff_customers %}
+                    <tr>
+                        <td><strong>{{ row.customer_name }}</strong></td>
+                        <td>{{ row.last_purchase_formatted }}</td>
+                        <td>{{ row.days_since }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if row.days_since > 120 %}badge-danger
+                                {% elif row.days_since > 90 %}badge-warning
+                                {% else %}badge-info{% endif %}">
+                                {% if row.days_since > 120 %}High Risk
+                                {% elif row.days_since > 90 %}Medium Risk
+                                {% else %}Low Risk{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-check-circle"></i>
+            <p>No customer dropoffs detected. All customers are active!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="affinity-tab" class="tab-content">
+    <div class="card">
+        <h3 class="section-title">
+            <i class="fas fa-project-diagram"></i>
+            Product Affinity Map
+        </h3>
+        <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+            Products frequently bought together by the same customers
+        </p>
+        
+        {% if affinity_map %}
+        <div class="affinity-grid">
+            {% for product, related in affinity_map.items() %}
+            {% if related|length > 0 %}
+            <div class="affinity-card">
+                <div class="affinity-product">
+                    <i class="fas fa-box"></i> {{ product }}
+                </div>
+                <ul class="affinity-list">
+                    {% for related_product, score in related %}
+                    <li>
+                        <span>{{ related_product }}</span>
+                        <span class="affinity-score">{{ (score * 100)|round(1) }}%</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-info-circle"></i>
+            <p>No product affinities detected. Try expanding your date range or filters.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize DataTables
+    $(document).ready(function() {
+        $('#customersTable, #productsTable, #routesTable, #cycleTable, #dropoffsTable').DataTable({
+            "pageLength": 25,
+            "order": [[0, "asc"]],
+            "language": {
+                "search": "Search:",
+                "lengthMenu": "Show _MENU_ entries",
+                "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+                "paginate": {
+                    "first": "First",
+                    "last": "Last",
+                    "next": "Next",
+                    "previous": "Previous"
+                }
+            }
+        });
+    });
+
+    // Tab switching function
+    function switchTab(tabName) {
+        // Hide all tab contents
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+
+        // Remove active class from all tab buttons
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        tabButtons.forEach(button => {
+            button.classList.remove('active');
+        });
+
+        // Show selected tab content
+        const selectedTab = document.getElementById(tabName + '-tab');
+        if (selectedTab) {
+            selectedTab.classList.add('active');
+        }
+
+        // Add active class to clicked button
+        event.target.closest('.tab-btn').classList.add('active');
+    }
+
+    // Auto-refresh filters when changed
+    document.getElementById('company').addEventListener('change', function() {
+        if (this.value !== 'all') {
+            // Could add AJAX to filter routes/products based on company
+        }
+    });
+</script>
+{% endblock %}

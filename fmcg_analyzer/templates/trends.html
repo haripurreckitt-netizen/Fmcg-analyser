@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Trends Analysis - Credit Analytics{% endblock %}
+
+{% block page_title %}Trends Analysis{% endblock %}
+{% block page_description %}Historical trends and performance insights{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <i class="fas fa-calendar-alt stat-icon"></i>
+        <div class="stat-value">{{ trends|length }}</div>
+        <div class="stat-label">Months Tracked</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+        <i class="fas fa-arrow-trend-up stat-icon"></i>
+        <div class="stat-value">
+            {% if trends and trends|length > 1 %}
+                {{ "%.1f"|format(((trends[-1].total_sales - trends[0].total_sales) / trends[0].total_sales * 100) if trends[0].total_sales else 0) }}%
+            {% else %}
+                0.0%
+            {% endif %}
+        </div>
+        <div class="stat-label">Growth Rate</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);">
+        <i class="fas fa-chart-line stat-icon"></i>
+        <div class="stat-value">{{ "{:,}".format(trends|map(attribute='total_sales')|sum|int if trends else 0) }}</div>
+        <div class="stat-label">Total Revenue</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #FFE000 0%, #799F0C 100%);">
+        <i class="fas fa-users stat-icon"></i>
+        <div class="stat-value">{{ trends|map(attribute='customer_count')|sum if trends else 0 }}</div>
+        <div class="stat-label">Total Customers</div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title">
+        <i class="fas fa-chart-line"></i>
+        Sales Trend Over Time
+    </h3>
+    <canvas id="salesTrendChart"></canvas>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <div class="card">
+        <h3 class="card-title">
+            <i class="fas fa-star"></i>
+            Credit Score Trends
+        </h3>
+        <canvas id="creditScoreChart"></canvas>
+    </div>
+    
+    <div class="card">
+        <h3 class="card-title">
+            <i class="fas fa-shopping-cart"></i>
+            Transaction Volume
+        </h3>
+        <canvas id="transactionChart"></canvas>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title">
+        <i class="fas fa-table"></i>
+        Monthly Performance Details
+    </h3>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th>Total Sales</th>
+                    <th>Transactions</th>
+                    <th>Avg Credit Score</th>
+                    <th>Avg Transaction</th>
+                    <th>Trend</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if trends %}
+                    {% for trend in trends %}
+                    <tr>
+                        <td><strong>{{ trend.month }}</strong></td>
+                        <td>{{ "{:,}".format(trend.total_sales|default(0)|int) }} PKR</td>
+                        <td>{{ trend.transaction_count|default(0) }}</td>
+                        <td>{{ trend.avg_credit_score|default(0)|int }}</td>
+                        <td>{{ "{:,}".format(trend.avg_transaction|default(0)|int) }} PKR</td>
+                        <td>
+                            {% if loop.index > 1 %}
+                                {% set prev = trends[loop.index0 - 1] %}
+                                {% if trend.total_sales > prev.total_sales %}
+                                    <span style="color: #10b981; font-weight: 600;">
+                                        <i class="fas fa-arrow-up"></i>
+                                        {{ "%.1f"|format((trend.total_sales - prev.total_sales) / prev.total_sales * 100) }}%
+                                    </span>
+                                {% else %}
+                                    <span style="color: #ef4444; font-weight: 600;">
+                                        <i class="fas fa-arrow-down"></i>
+                                        {{ "%.1f"|format((prev.total_sales - trend.total_sales) / prev.total_sales * 100) }}%
+                                    </span>
+                                {% endif %}
+                            {% else %}
+                                <span style="color: #999;">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: #999;">No trend data available</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <h4 style="font-size: 1rem; margin-bottom: 1rem; opacity: 0.9;">Best Performing Month</h4>
+        <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">
+            {% if trends %}
+                {{ (trends|sort(attribute='total_sales', reverse=true)|first).month }}
+            {% else %}
+                N/A
+            {% endif %}
+        </div>
+        <div style="font-size: 1.1rem; opacity: 0.9;">
+            {{ "{:,}".format((trends|sort(attribute='total_sales', reverse=true)|first).total_sales|int if trends else 0) }} PKR
+        </div>
+    </div>
+    
+    <div class="card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+        <h4 style="font-size: 1rem; margin-bottom: 1rem; opacity: 0.9;">Highest Avg Credit Score</h4>
+        <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">
+            {% if trends %}
+                {{ (trends|sort(attribute='avg_credit_score', reverse=true)|first).avg_credit_score|int }}
+            {% else %}
+                N/A
+            {% endif %}
+        </div>
+        <div style="font-size: 1.1rem; opacity: 0.9;">
+            {% if trends %}{{ (trends|sort(attribute='avg_credit_score', reverse=true)|first).month }}{% else %}—{% endif %}
+        </div>
+    </div>
+    
+    <div class="card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+        <h4 style="font-size: 1rem; margin-bottom: 1rem; opacity: 0.9;">Most Transactions</h4>
+        <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">
+            {% if trends %}
+                {{ (trends|sort(attribute='transaction_count', reverse=true)|first).transaction_count }}
+            {% else %}
+                N/A
+            {% endif %}
+        </div>
+        <div style="font-size: 1.1rem; opacity: 0.9;">
+            {% if trends %}{{ (trends|sort(attribute='transaction_count', reverse=true)|first).month }}{% else %}—{% endif %}
+        </div>
+    </div>
+    
+    <div class="card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+        <h4 style="font-size: 1rem; margin-bottom: 1rem; opacity: 0.9;">Avg Monthly Sales</h4>
+        <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">
+            {{ "{:,}".format(trends|map(attribute='total_sales')|sum / trends|length|int if trends else 0) }} PKR
+        </div>
+        <div style="font-size: 1.1rem; opacity: 0.9;">
+            Across all months
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Sales Trend Chart
+    const salesCtx = document.getElementById('salesTrendChart').getContext('2d');
+    const salesTrendChart = new Chart(salesCtx, {
+        type: 'line',
+        data: {
+            labels: {{ trends|map(attribute='month')|list|tojson }},
+            datasets: [{
+                label: 'Sales',
+                data: {{ trends|map(attribute='total_sales')|list|tojson }},
+                borderColor: 'rgba(102, 126, 234, 1)',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 6,
+                pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Credit Score Trend Chart
+    const creditCtx = document.getElementById('creditScoreChart').getContext('2d');
+    const creditScoreChart = new Chart(creditCtx, {
+        type: 'line',
+        data: {
+            labels: {{ trends|map(attribute='month')|list|tojson }},
+            datasets: [{
+                label: 'Avg Credit Score',
+                data: {{ trends|map(attribute='avg_credit_score')|list|tojson }},
+                borderColor: 'rgba(245, 158, 11, 1)',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 5,
+                pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Transaction Volume Chart
+    const transCtx = document.getElementById('transactionChart').getContext('2d');
+    const transactionChart = new Chart(transCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ trends|map(attribute='month')|list|tojson }},
+            datasets: [{
+                label: 'Transactions',
+                data: {{ trends|map(attribute='transaction_count')|list|tojson }},
+                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 2,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Details - {{ customer_name }}{% endblock %}
+{% block page_title %}Customer: {{ customer_name }}{% endblock %}
+{% block page_description %}Detailed report for {{ customer_name }}{% endblock %}
+
+{% block content %}
+
+<!-- CUSTOMER OVERVIEW -->
+<div class="customer-overview-card">
+    <div class="overview-stats-row">
+        <div class="overview-stat">
+            <div class="overview-stat-label">
+                <i class="fas fa-dollar-sign"></i>
+                Total Sales (PKR)
+            </div>
+            <div class="overview-stat-value">{{ "{:,.0f}".format(total_sales) }}</div>
+        </div>
+        
+        <div class="overview-stat">
+            <div class="overview-stat-label">
+                <i class="fas fa-chart-line"></i>
+                Total Profit (PKR)
+            </div>
+            <div class="overview-stat-value">{{ "{:,.0f}".format(total_profit) }}</div>
+        </div>
+        
+        <div class="overview-stat">
+            <div class="overview-stat-label">
+                <i class="fas fa-wallet"></i>
+                Current Balance (PKR)
+            </div>
+            <div class="overview-stat-value {{ 'danger' if credit_balance > 0 else 'success' }}">
+                {{ "{:,.0f}".format(credit_balance) }}
+            </div>
+        </div>
+        
+        <div class="overview-stat">
+            <div class="overview-stat-label">
+                <i class="fas fa-box"></i>
+                Total Units Sold
+            </div>
+            <div class="overview-stat-value">{{ "{:,.0f}".format(total_quantity) }}</div>
+        </div>
+        
+        <div class="overview-stat">
+            <div class="overview-stat-label">
+                <i class="fas fa-file-invoice"></i>
+                Total Invoices
+            </div>
+            <div class="overview-stat-value">{{ total_invoices }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- INVOICE SUMMARY -->
+<div class="card mt-4">
+    <div class="card-header d-flex justify-between">
+        <h3 class="card-title">
+            <i class="fas fa-file-invoice"></i> Invoice Summary
+        </h3>
+
+        <div class="export-buttons">
+            <a href="{{ url_for('export_invoices', format='pdf', customer=customer_name) }}" class="btn-export">
+                <i class="fas fa-file-pdf"></i> PDF
+            </a>
+            <a href="{{ url_for('export_invoices', format='excel', customer=customer_name) }}" class="btn-export">
+                <i class="fas fa-file-excel"></i> Excel
+            </a>
+        </div>
+    </div>
+
+    <p class="card-subtext">Click "View" to explore product lines for each invoice.</p>
+
+    <div class="table-wrapper">
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Invoice ID</th>
+                    <th>Delivery Date</th>
+                    <th>Orderbooker</th>
+                    <th>Company</th>
+                    <th>Sales (PKR)</th>
+                    <th>Units</th>
+                    <th>Profit (PKR)</th>
+                    <th></th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for inv in invoice_list|sort(attribute='delivery_date', reverse=True) %}
+                <tr>
+                    <td><strong>{{ inv.invoice_number }}</strong></td>
+                    <td>{{ inv.delivery_date.split(' ')[0] }}</td>
+
+                    <td>
+                        <a href="{{ url_for('orderbooker_details', name=inv.booker_name) }}">
+                            {{ inv.booker_name }}
+                        </a>
+                    </td>
+
+                    <td>{{ inv.company }}</td>
+                    <td>{{ "{:,.0f}".format(inv.amount) }}</td>
+                    <td>{{ inv.quantity }}</td>
+                    <td>{{ "{:,.0f}".format(inv.profit) }}</td>
+
+                    <td>
+                        <a href="{{ url_for('invoice_details', invoice_id=inv.invoice_number) }}" class="btn-small">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                    </td>
+                </tr>
+
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center">No invoices found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+</div>
+
+{% endblock %}

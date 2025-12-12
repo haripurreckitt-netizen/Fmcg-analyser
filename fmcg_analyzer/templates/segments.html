@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Segments - Credit Analytics{% endblock %}
+
+{% block page_title %}Customer Segments{% endblock %}
+{% block page_description %}Analyze customer groups and their characteristics{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <i class="fas fa-layer-group stat-icon"></i>
+        <div class="stat-value">{{ segments|length }}</div>
+        <div class="stat-label">Total Segments</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
+        <i class="fas fa-crown stat-icon"></i>
+        <div class="stat-value">{{ segments|selectattr('segment_name', 'equalto', 'Premium')|list|length }}</div>
+        <div class="stat-label">Premium Customers</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);">
+        <i class="fas fa-user-friends stat-icon"></i>
+        <div class="stat-value">{{ segments|map(attribute='customer_count')|sum if segments else 0 }}</div>
+        <div class="stat-label">Total Customers</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%);">
+        <i class="fas fa-chart-pie stat-icon"></i>
+        <div class="stat-value">{{ segments|map(attribute='avg_value')|sum|round if segments else 0 }}</div>
+        <div class="stat-label">Total Value</div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title">
+        <i class="fas fa-chart-bar"></i>
+        Segment Distribution
+    </h3>
+    <canvas id="segmentChart"></canvas>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    {% for segment in segments %}
+    <div class="card" style="background: linear-gradient(135deg, {{ ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a'][loop.index0 % 5] }} 0%, {{ ['#764ba2', '#f5576c', '#00f2fe', '#38f9d7', '#fee140'][loop.index0 % 5] }} 100%); color: white;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+            <h4 style="font-size: 1.25rem; font-weight: 600;">{{ segment.segment_name }}</h4>
+            <i class="fas fa-users" style="font-size: 2rem; opacity: 0.3;"></i>
+        </div>
+        <div style="font-size: 2rem; font-weight: 700; margin-bottom: 1rem;">
+            {{ segment.customer_count }} Customers
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+            <div>
+                <div style="opacity: 0.8; margin-bottom: 0.25rem;">Avg Value</div>
+                <div style="font-weight: 600; font-size: 1.1rem;">${{ "%.2f"|format(segment.avg_value|default(0)) }}</div>
+            </div>
+            <div>
+                <div style="opacity: 0.8; margin-bottom: 0.25rem;">Avg Score</div>
+                <div style="font-weight: 600; font-size: 1.1rem;">{{ segment.avg_credit_score|default(0)|int }}</div>
+            </div>
+        </div>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.3);">
+            <div style="opacity: 0.8; margin-bottom: 0.5rem;">Characteristics</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                {% for char in segment.characteristics|default(['Standard']) %}
+                <span style="background: rgba(255, 255, 255, 0.2); padding: 0.25rem 0.75rem; border-radius: 15px; font-size: 0.85rem;">
+                    {{ char }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <h3 class="card-title">
+        <i class="fas fa-table"></i>
+        Detailed Segment Analysis
+    </h3>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Segment Name</th>
+                    <th>Customers</th>
+                    <th>Avg Credit Score</th>
+                    <th>Avg Purchase Value</th>
+                    <th>Total Revenue</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if segments %}
+                    {% for segment in segments %}
+                    <tr>
+                        <td><strong>{{ segment.segment_name }}</strong></td>
+                        <td>{{ segment.customer_count }}</td>
+                        <td>{{ segment.avg_credit_score|default(0)|int }}</td>
+                        <td>${{ "%.2f"|format(segment.avg_value|default(0)) }}</td>
+                        <td>${{ "%.2f"|format(segment.total_revenue|default(segment.customer_count * segment.avg_value|default(0))) }}</td>
+                        <td>
+                            {% if segment.avg_credit_score|default(0) >= 700 %}
+                                <span class="badge badge-success">Excellent</span>
+                            {% elif segment.avg_credit_score|default(0) >= 600 %}
+                                <span class="badge badge-info">Good</span>
+                            {% else %}
+                                <span class="badge badge-warning">Needs Attention</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: #999;">No segments available</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Segment Distribution Chart
+    const ctx = document.getElementById('segmentChart').getContext('2d');
+    const segmentChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ segments|map(attribute='segment_name')|list|tojson }},
+            datasets: [{
+                label: 'Customer Count',
+                data: {{ segments|map(attribute='customer_count')|list|tojson }},
+                backgroundColor: [
+                    'rgba(102, 126, 234, 0.8)',
+                    'rgba(240, 147, 251, 0.8)',
+                    'rgba(79, 172, 254, 0.8)',
+                    'rgba(67, 233, 123, 0.8)',
+                    'rgba(250, 112, 154, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(102, 126, 234, 1)',
+                    'rgba(240, 147, 251, 1)',
+                    'rgba(79, 172, 254, 1)',
+                    'rgba(67, 233, 123, 1)',
+                    'rgba(250, 112, 154, 1)'
+                ],
+                borderWidth: 2,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

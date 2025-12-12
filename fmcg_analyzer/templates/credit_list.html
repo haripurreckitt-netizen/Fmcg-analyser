@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Credit List{% endblock %}
+{% block page_title %}Credit List{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+    <!-- Summary Cards Row -->
+    <div class="row mb-4">
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Outstanding</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">PKR {{ "{:,.0f}".format(total_outstanding) }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Customers Owing Us</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ customers_owing_us }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Customers We Owe</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ customers_we_owe }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter and Table Card -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Customer Credit List</h6>
+            
+            <form method="GET" action="{{ url_for('credit_list') }}" class="form-inline">
+                <label for="route" class="sr-only">Filter by Route:</label>
+                <select name="route" id="route" class="form-control form-control-sm mr-2" style="background: #fff; color: #495057;">
+                    {% for r in routes %}
+                    <option value="{{ r }}" {% if r == route_filter %}selected{% endif %}>
+                        {{ r.upper() if r == 'all' else r }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <label for="sort" class="sr-only">Sort By:</label>
+                <select name="sort" id="sort" class="form-control form-control-sm mr-2" style="background: #fff; color: #495057;">
+                    <option value="balance" {% if sort_by == 'balance' %}selected{% endif %}>Balance</option>
+                    <option value="customer_name" {% if sort_by == 'customer_name' %}selected{% endif %}>Customer Name</option>
+                    <option value="credit_score" {% if sort_by == 'credit_score' %}selected{% endif %}>RFM Score</option>
+                    <option value="recency" {% if sort_by == 'recency' %}selected{% endif %}>Recency</option>
+                    <option value="net_amount" {% if sort_by == 'net_amount' %}selected{% endif %}>Total Sales</option>
+                    <option value="days_since" {% if sort_by == 'days_since' %}selected{% endif %}>Days Since</option>
+                </select>
+
+                <label for="order" class="sr-only">Order:</label>
+                <select name="order" id="order" class="form-control form-control-sm mr-2" style="background: #fff; color: #495057;">
+                    <option value="desc" {% if order == 'desc' %}selected{% endif %}>Descending</option>
+                    <option value="asc" {% if order == 'asc' %}selected{% endif %}>Ascending</option>
+                </select>
+
+                <button type="submit" class="btn btn-primary btn-sm">Apply Filter</button>
+            </form>
+        </div>
+
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th class="sortable" data-column="customer_name" style="cursor: pointer;">
+                                Customer Name 
+                                <i class="fas fa-sort{{ '-up' if sort_by == 'customer_name' and order == 'asc' else '-down' if sort_by == 'customer_name' else '' }}"></i>
+                            </th>
+                            <th class="sortable" data-column="customer_code" style="cursor: pointer;">
+                                Code
+                                <i class="fas fa-sort{{ '-up' if sort_by == 'customer_code' and order == 'asc' else '-down' if sort_by == 'customer_code' else '' }}"></i>
+                            </th>
+                            <th class="sortable" data-column="route" style="cursor: pointer;">
+                                Route
+                                <i class="fas fa-sort{{ '-up' if sort_by == 'route' and order == 'asc' else '-down' if sort_by == 'route' else '' }}"></i>
+                            </th>
+                            <th class="sortable" data-column="credit_score" style="cursor: pointer;">
+                                RFM Score
+                                <i class="fas fa-sort{{ '-up' if sort_by == 'credit_score' and order == 'asc' else '-down' if sort_by == 'credit_score' else '' }}"></i>
+                            </th>
+                            <th class="sortable" data-column="Segment" style="cursor: pointer;">
+                                Segment
+                                <i class="fas fa-sort{{ '-up' if sort_by == 'Segment' and order == 'asc' else '-down' if sort_by == 'Segment' else '' }}"></i>
+                            </th>
+                            <th class="sortable" data-column="recency" style="cursor: pointer;">
+                                Recency (Days)
+                                <i class="fas fa-sort{{ '-up' if sort_by == 'recency' and order == 'asc' else '-down' if sort_by == 'recency' else '' }}"></i>
+                            </th>
+                            <th class="sortable" data-column="invoice_count" style="cursor: pointer;">
+                                Frequency
+                                <i class="fas fa-sort{{ '-up' if sort_by == 'invoice_count' and order == 'asc' else '-down' if sort_by == 'invoice_count' else '' }}"></i>
+                            </th>
+                            <th class="sortable" data-column="net_amount" style="cursor: pointer;">
+                                Monetary (PKR)
+                                <i class="fas fa-sort{{ '-up' if sort_by == 'net_amount' and order == 'asc' else '-down' if sort_by == 'net_amount' else '' }}"></i>
+                            </th>
+                            <th class="sortable bg-warning text-white" data-column="balance" style="cursor: pointer;">
+                                Balance (PKR)
+                                <i class="fas fa-sort{{ '-up' if sort_by == 'balance' and order == 'asc' else '-down' if sort_by == 'balance' else '' }}"></i>
+                            </th>
+                            <th class="sortable" data-column="days_since" style="cursor: pointer;">
+                                Days Since Sale
+                                <i class="fas fa-sort{{ '-up' if sort_by == 'days_since' and order == 'asc' else '-down' if sort_by == 'days_since' else '' }}"></i>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in customers %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('customer_details', name=customer.customer_name|urlencode) }}" style="color: #4e73df; text-decoration: none; font-weight: 600;">
+                                    {{ customer.customer_name }}
+                                </a>
+                            </td>
+                            <td>{{ customer.customer_code }}</td>
+                            <td><span class="badge badge-info font-weight-bold">{{ customer.route | default('N/A') }}</span></td>
+                            <td class="text-center"><span class="badge badge-primary font-weight-bold p-2">{{ customer.credit_score | default(0) | int }}</span></td>
+                            <td><span class="badge badge-secondary font-weight-bold">{{ customer.Segment | default('UNKNOWN') }}</span></td>
+                            <td>{{ customer.recency | default(999) | int }}</td>
+                            <td>{{ customer.invoice_count | default(0) | int }}</td>
+                            <td>{{ "{:,.0f}".format(customer.net_amount | default(0)) }}</td>
+                            <td class="bg-light">
+                                <strong class="{{ 'text-danger' if customer.balance > 0 else 'text-success' }} h6">
+                                    {{ "{:,.0f}".format(customer.balance | default(0)) }}
+                                </strong>
+                            </td>
+                            <td>{{ customer.days_since | default(999) | int }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="10" style="text-align: center; padding: 3rem; color: #858796;">
+                                <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                                <p style="margin: 0;">No customers found.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// DataTable initialization with sorting disabled
+$(document).ready(function() {
+  $('#dataTable').DataTable({
+    searching: false,
+    lengthChange: false,
+    ordering: false,  // CRITICAL: Disables DataTable's sorting so our custom sorting works
+    dom: '<"row"<"col-sm-12"tr>>' +
+         '<"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+  });
+
+  // Make table headers clickable for sorting
+  $('.sortable').on('click', function() {
+    const column = $(this).data('column');
+    
+    // Get current parameters from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentSort = urlParams.get('sort') || 'balance';
+    const currentOrder = urlParams.get('order') || 'desc';
+    const currentRoute = urlParams.get('route') || 'all';
+    
+    // Toggle order if clicking the same column
+    let newOrder = 'desc';
+    if (column === currentSort) {
+      newOrder = currentOrder === 'desc' ? 'asc' : 'desc';
+    }
+    
+    // Build new URL with updated parameters
+    const url = new URL(window.location.href);
+    url.searchParams.set('sort', column);
+    url.searchParams.set('order', newOrder);
+    url.searchParams.set('route', currentRoute);
+    
+    // Navigate to new URL
+    window.location.href = url.toString();
+  });
+});
+</script>
+{% endblock %}

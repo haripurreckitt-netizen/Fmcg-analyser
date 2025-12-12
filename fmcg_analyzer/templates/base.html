@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FMCG Analytics{% endblock %}</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap4.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --success-dark: #059669;
+            --success-light: #34d399;
+            --warning: #f59e0b;
+            --warning-light: #fbbf24;
+            --danger: #ef4444;
+            --danger-light: #f87171;
+            --info: #3b82f6;
+            --bg: #f8fafc;
+            --bg-secondary: #f1f5f9;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --shadow: rgba(15, 23, 42, 0.08);
+            --shadow-hover: rgba(15, 23, 42, 0.12);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+            min-height: 100vh;
+            color: var(--text);
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--surface);
+            padding: 2rem 0;
+            box-shadow: 4px 0 24px var(--shadow);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        .logo {
+            padding: 0 1.5rem 2rem;
+            border-bottom: 2px solid var(--border-light);
+            margin-bottom: 1.5rem;
+        }
+
+        .logo h2 {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo h2 i {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 1.7rem;
+        }
+
+        .logo p {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 1rem;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            margin-bottom: 0.4rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.9rem 1.1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+            color: var(--primary);
+            transform: translateX(4px);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            box-shadow: 0 8px 20px -4px rgba(99, 102, 241, 0.4);
+            transform: translateX(4px);
+        }
+
+        .nav-link i {
+            margin-right: 0.85rem;
+            font-size: 1.1rem;
+            width: 22px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-link:hover i,
+        .nav-link.active i {
+            transform: scale(1.15);
+        }
+
+        .sidebar-footer {
+            padding: 1.5rem;
+            margin-top: auto;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+            padding: 2rem 2.5rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 24px var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .header h1 {
+            color: var(--text);
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        
+        /* Card Styles */
+        .card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 24px var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px var(--shadow-hover);
+        }
+
+        /* Customer Overview Specific Styles */
+        .customer-overview-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 24px var(--shadow);
+        }
+
+        .overview-stats-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .overview-stat {
+            text-align: center;
+        }
+
+        .overview-stat-label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .overview-stat-label i {
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        .overview-stat-value {
+            color: var(--text);
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .overview-stat-value.danger {
+            color: var(--danger);
+        }
+
+        .overview-stat-value.success {
+            color: var(--success);
+        }
+
+        .overview-stat-value.neutral {
+            color: var(--text);
+        }
+
+        /* Responsive stats */
+        @media (max-width: 1200px) {
+            .overview-stats-row {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .overview-stats-row {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+            
+            .overview-stat-value {
+                font-size: 1.5rem;
+            }
+            
+            .overview-stat-label {
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .overview-stats-row {
+                grid-template-columns: 1fr;
+                gap: 1.25rem;
+            }
+        }
+
+        /* Section Title */
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        .section-title i {
+            color: var(--primary);
+            font-size: 1.3rem;
+        }
+        
+        /* Alert Styles */
+        .alert {
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 16px;
+            position: relative;
+            border: 2px solid;
+            animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+            border-color: var(--success);
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #92400e;
+            border-color: var(--warning);
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #991b1b;
+            border-color: var(--danger);
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            color: #1e40af;
+            border-color: var(--info);
+        }
+        
+        /* Button Styles */
+        .btn {
+            padding: 0.85rem 1.6rem;
+            border-radius: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::after {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+            color: white;
+            box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.5);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px -6px rgba(16, 185, 129, 0.6);
+        }
+
+        .btn-success:active {
+            transform: translateY(0);
+        }
+
+        .btn i {
+            margin-right: 0.6rem;
+            z-index: 1;
+        }
+
+        .btn span {
+            z-index: 1;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.9rem;
+        }
+
+        table thead {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+        }
+
+        table thead th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        table thead th:first-child {
+            border-top-left-radius: 12px;
+        }
+
+        table thead th:last-child {
+            border-top-right-radius: 12px;
+        }
+
+        table tbody tr {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border-light);
+            transition: all 0.2s ease;
+        }
+
+        table tbody tr:hover {
+            background: var(--bg);
+            transform: scale(1.01);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        table tbody td {
+            padding: 1rem 1.2rem;
+            color: var(--text);
+        }
+
+        table tbody tr:last-child td:first-child {
+            border-bottom-left-radius: 12px;
+        }
+
+        table tbody tr:last-child td:last-child {
+            border-bottom-right-radius: 12px;
+        }
+
+        /* Positive/Negative Number Styles */
+        .positive {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .negative {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .neutral {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Badge Styles */
+        .badge {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-success {
+            background: linear-gradient(135deg, var(--success-light) 0%, var(--success) 100%);
+            color: white;
+        }
+
+        .badge-warning {
+            background: linear-gradient(135deg, var(--warning-light) 0%, var(--warning) 100%);
+            color: white;
+        }
+
+        .badge-danger {
+            background: linear-gradient(135deg, var(--danger-light) 0%, var(--danger) 100%);
+            color: white;
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, #60a5fa 0%, var(--info) 100%);
+            color: white;
+        }
+
+        /* Form Styles */
+        select, input, textarea {
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Content Wrapper */
+        .content-wrapper {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 260px;
+            }
+            .main-content {
+                margin-left: 260px;
+            }
+            .overview-grid {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 1.25rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 1000;
+                width: 280px;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
+
+            .header {
+                padding: 1.5rem;
+                border-radius: 16px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .card, .customer-overview-card {
+                padding: 1.5rem;
+                border-radius: 16px;
+            }
+
+            .overview-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .overview-stat {
+                padding: 1.25rem;
+            }
+
+            .overview-stat-value {
+                font-size: 1.5rem;
+            }
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            table thead th,
+            table tbody td {
+                padding: 0.75rem 0.8rem;
+            }
+        }
+
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 8px 24px -6px rgba(99, 102, 241, 0.6);
+            z-index: 999;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .mobile-menu-toggle:hover {
+            transform: scale(1.1) rotate(90deg);
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--primary-dark) 0%, var(--secondary) 100%);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <div>
+                <div class="logo">
+                    <h2><i class="fas fa-chart-line"></i>Abdul Salam & Brothers</h2>
+                    <p>Sales Analytics</p>
+                </div>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                            <i class="fas fa-home"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('monthly_analysis') }}" class="nav-link {% if request.endpoint == 'monthly_analysis' %}active{% endif %}">
+                            <i class="fas fa-calendar-week"></i>
+                            <span>Monthly Analysis</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('route_planner') }}" class="nav-link {% if request.endpoint == 'route_planner' or request.endpoint == 'planner' %}active{% endif %}">
+                            <i class="fas fa-map-signs"></i>
+                            <span>Route Planner</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('purchasing_planner') }}" class="nav-link {% if request.endpoint == 'purchasing_planner' %}active{% endif %}">
+                            <i class="fas fa-clipboard-list"></i>
+                            <span>Purchasing Planner</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('credit_list') }}" class="nav-link {% if request.endpoint == 'credit_list' %}active{% endif %}">
+                            <i class="fas fa-credit-card"></i>
+                            <span>Credit List</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('high_risk') }}" class="nav-link {% if request.endpoint == 'high_risk' %}active{% endif %}">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>High-Risk Customers</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('high_risk') }}" class="nav-link {% if request.endpoint == 'high_risk' %}active{% endif %}">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Growth Customers</span>
+                        </a>
+                    </li>
+                     <li class="nav-item">
+                        <a href="{{ url_for('high_risk') }}" class="nav-link {% if request.endpoint == 'high_risk' %}active{% endif %}">
+                            <i class="fas fa-users"></i>
+                            <span>Neutral Customers</span>
+                        </a>
+                    </li>
+
+
+                    <li class="nav-item">
+                       <a href="{{ url_for('company_product_deep_dive') }}" class="nav-link {% if request.endpoint == 'company_product_deep_dive' %}active{% endif %}">
+                       <i class="fas fa-microscope"></i>
+                       <span>Deep Dive Analysis</span>
+                      </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="{{ url_for('add_data') }}" class="nav-link {% if request.endpoint == 'add_data' %}active{% endif %}">
+                            <i class="fas fa-upload"></i>
+                            <span>Upload Data</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="sidebar-footer">
+                 <form action="/update_db" method="POST">
+                    <button type="submit" class="btn btn-success" style="width: 100%;">
+                        <i class="fas fa-database"></i>
+                        <span>Update Database</span>
+                    </button>
+                </form>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="header">
+                <div>
+                    <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="content-wrapper">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap4.min.js"></script>
+
+    <script>
+        // Mobile menu toggle
+        const sidebar = document.getElementById('sidebar');
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        
+        if (mobileMenuToggle) {
+            mobileMenuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                const icon = mobileMenuToggle.querySelector('i');
+                icon.classList.toggle('fa-bars');
+                icon.classList.toggle('fa-times');
+            });
+
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 768 && 
+                    !sidebar.contains(e.target) && 
+                    !mobileMenuToggle.contains(e.target) && 
+                    sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                    const icon = mobileMenuToggle.querySelector('i');
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                }
+            });
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+
+</body>
+</html>

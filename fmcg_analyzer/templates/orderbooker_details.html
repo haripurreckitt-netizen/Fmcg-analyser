@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ name }} - Sales Performance{% endblock %}
+{% block page_description %}Comprehensive sales analysis and metrics{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <form method="GET" class="bg-glass p-3 rounded">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label for="start" class="form-label small">Start Date</label>
+                        <input type="date" id="start" name="start" value="{{ start_date }}" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="end" class="form-label small">End Date</label>
+                        <input type="date" id="end" name="end" value="{{ end_date }}" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-secondary w-100" onclick="toggleDisplayMode()">
+                            <i class="fas fa-{{ 'table' if display_mode == 'cards' else 'th-large' }}"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-2">
+            <div class="bg-glass p-3 rounded text-center">
+                <small class="text-muted">Filtered Period Sales</small>
+                <h4 class="mb-0">{{ "{:,.0f}".format(filtered_sales) }} PKR</h4>
+            </div>
+        </div>
+        
+        <div class="col-md-2">
+            <div class="bg-glass p-3 rounded text-center">
+                <small class="text-muted">Filtered Period Profit</small>
+                <h4 class="mb-0">{{ "{:,.0f}".format(total_profit_for_period) }} PKR</h4>
+            </div>
+        </div>
+    </div>
+
+  
+
+    <!-- Period Comparison - Table View -->
+    <div id="salesTable" class="{% if display_mode == 'cards' %}d-none{% endif %}">
+        <div class="card bg-glass mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line"></i> Sales Comparison</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th class="text-end">Sales (PKR)</th>
+                            <th>Top Company</th>
+                            <th class="text-end">Growth vs Current</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="table-primary">
+                            <td><strong>{{ current_month_name }}</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.0f}".format(current_sales) }}</strong></td>
+                            <td>{{ top_company_current }}</td>
+                            <td class="text-end">-</td>
+                        </tr>
+                        <tr>
+                            <td>{{ last_month_name }}</td>
+                            <td class="text-end">{{ "{:,.0f}".format(last_month_sales) }}</td>
+                            <td>{{ top_company_last }}</td>
+                            <td class="text-end {% if growth_vs_last_month >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                <i class="fas fa-arrow-{{ 'up' if growth_vs_last_month >= 0 else 'down' }}"></i>
+                                {{ "{:.1f}".format(growth_vs_last_month|abs) }}%
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>{{ last_year_month_name }}</td>
+                            <td class="text-end">{{ "{:,.0f}".format(last_year_sales) }}</td>
+                            <td>{{ top_company_last_year }}</td>
+                            <td class="text-end {% if growth_vs_last_year >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                <i class="fas fa-arrow-{{ 'up' if growth_vs_last_year >= 0 else 'down' }}"></i>
+                                {{ "{:.1f}".format(growth_vs_last_year|abs) }}%
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Period Comparison - Card View -->
+    <div id="salesCards" class="{% if display_mode == 'table' %}d-none{% endif %}">
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card bg-glass border-primary">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">{{ current_month_name }}</h6>
+                        <h3 class="mb-3">{{ "{:,.0f}".format(current_sales) }} <small class="text-muted">PKR</small></h3>
+                        <p class="mb-1"><small><strong>Top:</strong> {{ top_company_current }}</small></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-glass">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">{{ last_month_name }}</h6>
+                        <h3 class="mb-3">{{ "{:,.0f}".format(last_month_sales) }} <small class="text-muted">PKR</small></h3>
+                        <p class="mb-1"><small><strong>Top:</strong> {{ top_company_last }}</small></p>
+                        <p class="mb-0">
+                            <span class="badge bg-{{ 'success' if growth_vs_last_month >= 0 else 'danger' }}">
+                                {{ "{:+.1f}".format(growth_vs_last_month) }}%
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-glass">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">{{ last_year_month_name }}</h6>
+                        <h3 class="mb-3">{{ "{:,.0f}".format(last_year_sales) }} <small class="text-muted">PKR</small></h3>
+                        <p class="mb-1"><small><strong>Top:</strong> {{ top_company_last_year }}</small></p>
+                        <p class="mb-0">
+                            <span class="badge bg-{{ 'success' if growth_vs_last_year >= 0 else 'danger' }}">
+                                {{ "{:+.1f}".format(growth_vs_last_year) }}%
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+
+
+
+
+    <div class="card bg-glass mb-4">
+        <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-search-dollar"></i> Day-wise Profit</h5>
+                <small class="text-muted">For selected date range</small>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th class="text-end">Total Profit (PKR)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for day in day_wise_profit_list %}
+                        <tr>
+                            <td>{{ day.date }}</td>
+                            <td class="text-end">{{ "{:,.0f}".format(day.profit) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="2" class="text-center">No profit data found for this period.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+
+
+
+
+    <!-- Two Column Layout -->
+    <div class="row g-3 mb-4">
+        <!-- Company Breakdown -->
+        <div class="col-md-6">
+            <div class="card bg-glass h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-building"></i> Company Breakdown</h5>
+                    <small class="text-muted">For selected date range</small>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th class="text-end">Sales (PKR)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for company, sales in company_breakdown.items() %}
+                            <tr>
+                                <td>{{ company }}</td>
+                                <td class="text-end">{{ "{:,.0f}".format(sales) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Route Breakdown -->
+        <div class="col-md-6">
+            <div class="card bg-glass h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-route"></i> Route Breakdown</h5>
+                    <small class="text-muted">For selected date range</small>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Route</th>
+                                <th class="text-end">Sales (PKR)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for route, sales in route_breakdown.items() %}
+                            <tr>
+                                <td>{{ route }}</td>
+                                <td class="text-end">{{ "{:,.0f}".format(sales) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Customers -->
+    <div class="card bg-glass">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-star"></i> Top 10 Customers</h5>
+            <small class="text-muted">For selected date range</small>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Code</th>
+                        <th>Customer Name</th>
+                        <th class="text-end">Sales (PKR)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in top_customers %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ customer.customer_code }}</td>
+                        <td>{{ customer.customer_name }}</td>
+                        <td class="text-end">{{ "{:,.0f}".format(customer.net_amount) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleDisplayMode() {
+    const table = document.getElementById("salesTable");
+    const cards = document.getElementById("salesCards");
+    const currentMode = table.classList.contains("d-none") ? "cards" : "table";
+    const newMode = currentMode === "table" ? "cards" : "table";
+
+    table.classList.toggle("d-none");
+    cards.classList.toggle("d-none");
+
+    const url = new URL(window.location);
+    url.searchParams.set("display", newMode);
+    window.history.replaceState({}, "", url);
+}
+</script>
+{% endblock %}
